@@ -127,3 +127,38 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# catalogue and miscellaneous files from the HFF-DeepSpace site
+*.cat
+*.cat.gz
+*.coeff
+*.dat
+*.dat.gz
+*.eps.gz
+*.fits
+*.fits.gz
+*.fout
+*.lis
+*.lmf
+*.param
+*.pdf
+*.pro
+*.pz
+*.rf
+*.rf.param
+*.save
+*.sex.gz
+*.tar
+*.temp_sed
+*.tempfilt
+*.translate
+*.zbin
+*.zip
+*.zout
+*README
+
+# generated files
+*.csv
+*.npz
+*.par
+*.reg
