@@ -326,10 +326,10 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     final = join(final_objs, UVJ, keys='id')
     
     if write_final_objs :
-        final.write('tests_using_A2744/' + cluster + '_final_objects.fits')
+        final.write(cluster + '/' + cluster + '_final_objects.fits')
     
     if write_regions :
-        region_file = ('tests_using_A2744/' + cluster +
+        region_file = (cluster + '/' + cluster + 
                        '_final_objects_flux_radius.reg')
         first = '# Region file format: DS9 version 4.1\n'
         second = ('global color=red width=2 select=1 ' +
@@ -378,13 +378,14 @@ def open_cutout(infile) :
     with fits.open(infile) as hdu :
         hdr = hdu[0].header
         photfnu = hdr['PHOTFNU']
+        R_e = hdr['R_e']
         data = hdu[0].data
         dim = data.shape
     
-    return data, dim, photfnu
+    return data, dim, photfnu, R_e
 
 def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
-                photfnu, scale, rms, vmin=None, vmax=None, show=False) :
+                photfnu, scale, rms, r_e, vmin=None, vmax=None, show=False) :
     '''
     Save an individual cutout image based on RA and Dec, and given the WCS
     information. Include basic information in the header such as total
@@ -411,6 +412,10 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
         DESCRIPTION.
     scale : TYPE
         DESCRIPTION.
+    rms : TYPE
+        DESCRIPTION.
+    r_e : TYPE
+        DESCRIPTION.
     vmin : TYPE, optional
         DESCRIPTION. The default is None.
     vmax : TYPE, optional
@@ -425,9 +430,10 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     '''
     
     position = SkyCoord(sky_ra, sky_dec, unit='deg', frame='icrs')
-    size = u.Quantity(angular_size.value, u.arcsec)
+    size = u.Quantity(angular_size.value, u.arcsec) # size along each axis
     
-    cutout = Cutout2D(data, position, size, wcs=wcs)
+    cutout = Cutout2D(data, position, 2*size, wcs=wcs) # cutout will have
+        # radius of 'size'
     
     hdu = fits.PrimaryHDU(cutout.data)
     hdr = hdu.header
@@ -439,6 +445,8 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     hdr.comments['SCALE'] = 'Drizzle, pixel size (arcsec) of output image'
     hdr['RMS'] = rms
     hdr.comments['RMS'] = 'RMS value of science image--calculated'
+    hdr['R_E'] = r_e
+    hdr.comments['R_E'] = 'Radius enclosing half the total flux, pixels'
     hdu.writeto(outfile)
     
     if show :

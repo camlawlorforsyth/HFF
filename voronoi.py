@@ -87,7 +87,7 @@ def vorbin_all(inDir, outDir):
     '''
     
     cluster = inDir[:-9] # get the name of the cluster from the input directory
-    SNR = 120 # the target signal-to-noise ratio to use
+    SNR = 400 # the target signal-to-noise ratio to use
     
     f160w_paths = '{}{}_ID_*_f160w.fits'.format(inDir, cluster)
     f160w_file_list = glob.glob(f160w_paths) # get all F160W images
@@ -106,14 +106,14 @@ def vorbin_all(inDir, outDir):
     
     for i in range(len(f160w_files)) :
         outfile = '{}{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])
-        sci, dim, photnu = open_cutout(f160w_files[i])
-        noise, _, _ = open_cutout(noise_files[i])
+        sci, dim, photnu, r_e = open_cutout(f160w_files[i])
+        noise, _, _, _ = open_cutout(noise_files[i])
         
         xs, ys, binNum, xBar, yBar, SN, nPixels = vorbin_data(sci, noise,
                                                               dim, SNR)
         bins_image = binNum.reshape(dim) # reshape the bins into an image
         
         np.savez(outfile, image=bins_image, x=xs, y=ys, binNum=binNum,
-                  xbar=xBar, ybar=yBar, SN=SN, nPixels=nPixels)
+                 xbar=xBar, ybar=yBar, SN=SN, nPixels=nPixels)
     
     return

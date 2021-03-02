@@ -43,12 +43,6 @@ class Cluster :
             with fits.open(file) as hdu :
                 sci = hdu[0].data
             
-            # mask = np.where(segMap > 0)
-            # bkg = sci
-            # bkg[mask] = 0
-            # out = fits.PrimaryHDU(bkg)
-            # out.writeto('tests_using_A2744/f160w_bkg.fits')
-            
             mask = np.where(segMap == 0)
             masked_sci = sci[mask]
             masked_sci[masked_sci > 10] = np.nan
@@ -69,6 +63,8 @@ class Cluster :
         None.
         
         '''
+        
+        extent = 2.5
         
         sciObjs = Table.read(self.finalObjsPath)
         sciObjs = sciObjs[np.where(sciObjs['id'] == 5830)] # for testing
@@ -100,13 +96,13 @@ class Cluster :
                     outfile = '{}cutouts/{}_ID_{}_{}.fits'.format(self.outDir,
                                                           self.name, id_string,
                                                           filt)
-                    save_cutout(ra, dec, r_e*scale, science, wcs, outfile,
-                                exposure.value, photfnu.value, scale.value,
-                                rms)
+                    save_cutout(ra, dec, extent*r_e*scale, science, wcs,
+                                outfile, exposure.value, photfnu.value,
+                                scale.value, rms, r_e.value[0])
                     noise_outfile = ('{}cutouts/{}_ID_{}_{}_noise.fits'.format(
                         self.outDir,self.name, id_string, filt))
-                    save_cutout(ra, dec, r_e*scale, noise, wcs, noise_outfile,
-                                exposure.value, photfnu.value, scale.value,
-                                rms)
+                    save_cutout(ra, dec, extent*r_e*scale, noise, wcs,
+                                noise_outfile, exposure.value, photfnu.value,
+                                scale.value, rms, r_e.value[0])
         
         return

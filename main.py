@@ -2,14 +2,15 @@
 from cluster import Cluster
 import core
 import voronoi
+import photometry
 
 def main() :
     
     # determine the final science objects for Abell 2744, based on flags
     # in the catalogs
     core.determine_finalObjs_w_UVJ('abell_2744', 'id', 0.308,
-                                   'abell2744clu_catalogs',
-                                   'abell2744clu_v3.9', 153, 155, 161)
+                                    'abell2744clu_catalogs',
+                                    'abell2744clu_v3.9', 153, 155, 161)
     
     # create a Cluster instance for Abell 2744
     a2744 = initialize('a2744')
@@ -23,6 +24,11 @@ def main() :
     
     # now vorbin the cutouts for each galaxy and save the resulting files
     voronoi.vorbin_all('a2744/cutouts/', 'a2744/vorbins/')
+    
+    # then determine the flux for every vorbin for each galaxy, saving the
+    # photometry for each galaxy into a separate file
+    photometry.determine_fluxes('a2744/vorbins/', 'a2744/cutouts/',
+                                'a2744/photometry/', a2744.filters)
     
     return
 
@@ -44,8 +50,8 @@ def initialize(cluster) :
         
         filters = ['f275w', 'f336w', 'f435w', 'f606w', 'f814w', 'f105w', 'f125w',
                    'f140w', 'f160w']
-        outDir = 'a2744_tests/'
-        finalSciObjs = 'a2744_tests/a2744_final_objects.fits'
+        outDir = 'a2744/'
+        finalSciObjs = 'a2744/a2744_final_objects.fits'
         rms = [0.00017821459857111745, 0.00014789605532426083, 0.0007145838788770763,
                0.001578221285547029,   0.0018031112928780836,  0.0293976362500103,
                0.002737900021748479,   0.016844529370723973,   0.0037151459]
