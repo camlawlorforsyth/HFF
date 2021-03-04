@@ -106,8 +106,8 @@ def vorbin_all(inDir, outDir):
     
     for i in range(len(f160w_files)) :
         outfile = '{}{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])
-        sci, dim, photnu, r_e = open_cutout(f160w_files[i])
-        noise, _, _, _ = open_cutout(noise_files[i])
+        sci, dim, photnu, r_e, redshift = open_cutout(f160w_files[i])
+        noise, _, _, _, _ = open_cutout(noise_files[i])
         
         xs, ys, binNum, xBar, yBar, SN, nPixels = vorbin_data(sci, noise,
                                                               dim, SNR)

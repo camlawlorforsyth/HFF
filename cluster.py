@@ -69,7 +69,7 @@ class Cluster :
         sciObjs = Table.read(self.finalObjsPath)
         sciObjs = sciObjs[np.where(sciObjs['id'] == 5830)] # for testing
         ID, r_e = sciObjs['id'], sciObjs['flux_radius']*u.pixel
-        ra, dec = sciObjs['ra'], sciObjs['dec']
+        ra, dec, redshift = sciObjs['ra'], sciObjs['dec'], sciObjs['z']
         
         dictionary = {}
         for i in range(len(self.filters)) :
@@ -98,11 +98,11 @@ class Cluster :
                                                           filt)
                     save_cutout(ra, dec, extent*r_e*scale, science, wcs,
                                 outfile, exposure.value, photfnu.value,
-                                scale.value, rms, r_e.value[0])
+                                scale.value, rms, r_e.value[0], redshift[0])
                     noise_outfile = ('{}cutouts/{}_ID_{}_{}_noise.fits'.format(
                         self.outDir,self.name, id_string, filt))
                     save_cutout(ra, dec, extent*r_e*scale, noise, wcs,
                                 noise_outfile, exposure.value, photfnu.value,
-                                scale.value, rms, r_e.value[0])
+                                scale.value, rms, r_e.value[0], redshift[0])
         
         return

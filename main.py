@@ -9,8 +9,8 @@ def main() :
     # determine the final science objects for Abell 2744, based on flags
     # in the catalogs
     core.determine_finalObjs_w_UVJ('abell_2744', 'id', 0.308,
-                                    'abell2744clu_catalogs',
-                                    'abell2744clu_v3.9', 153, 155, 161)
+                                   'abell2744clu_catalogs',
+                                   'abell2744clu_v3.9', 153, 155, 161)
     
     # create a Cluster instance for Abell 2744
     a2744 = initialize('a2744')
@@ -29,6 +29,9 @@ def main() :
     # photometry for each galaxy into a separate file
     photometry.determine_fluxes('a2744/vorbins/', 'a2744/cutouts/',
                                 'a2744/photometry/', a2744.filters)
+    
+    # then on linux, move to the `hff/` directory, and run
+    # python prospector.py
     
     return
 

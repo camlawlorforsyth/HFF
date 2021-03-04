@@ -3,10 +3,13 @@ import os
 import glob
 import numpy as np
 
+from astropy.cosmology import FlatLambdaCDM
 from astropy.table import Table
 import astropy.units as u
 
 from core import open_cutout
+
+cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
 def determine_fluxes(vorbinDir, cutoutDir, outDir, filters) :
     '''
@@ -61,9 +64,10 @@ def determine_fluxes(vorbinDir, cutoutDir, outDir, filters) :
                                                    filt)
             noise_file = '{}{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
                                                            IDs[i], filt)
-            sci, dim, photfnu, r_e = open_cutout(sci_file)
-            noise, _, _, _ = open_cutout(noise_file)
-            fluxes, uncerts, R_e = [], [], []
+            sci, dim, photfnu, r_e, redshift = open_cutout(sci_file)
+            noise, _, _, _, _ = open_cutout(noise_file)
+            lumDist = cosmo.luminosity_distance(redshift)
+            fluxes, uncerts, R_e, redshifts, lumDists = [], [], [], [], []
             for val in range(numBins) :
                 mask = np.where(bins_image == val)
                 masked_sci = sci[mask]
@@ -73,9 +77,13 @@ def determine_fluxes(vorbinDir, cutoutDir, outDir, filters) :
                 uncert = photfnu*np.nansum(masked_noise)
                 uncerts.append(uncert)
                 R_e.append(r_e)
+                redshifts.append(redshift)
+                lumDists.append(lumDist.value)
             photometry[filt + '_flux'] = fluxes*u.Jy
             photometry[filt + '_err'] = uncerts*u.Jy
-        photometry['R_e'] = R_e
+        photometry['R_e'] = R_e*u.pix
+        photometry['z'] = redshifts
+        photometry['lumDist'] = lumDists*u.Mpc
         photometry['use'] = np.sqrt(nPixels/np.pi) < R_e_percent*np.array(R_e)
         photometry.write(outfile)
     

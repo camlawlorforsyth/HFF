@@ -377,15 +377,17 @@ def open_cutout(infile) :
     '''
     with fits.open(infile) as hdu :
         hdr = hdu[0].header
+        redshift = hdr['Z']
         photfnu = hdr['PHOTFNU']
         R_e = hdr['R_e']
         data = hdu[0].data
         dim = data.shape
     
-    return data, dim, photfnu, R_e
+    return data, dim, photfnu, R_e, redshift
 
 def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
-                photfnu, scale, rms, r_e, vmin=None, vmax=None, show=False) :
+                photfnu, scale, rms, r_e, redshift, vmin=None, vmax=None,
+                show=False) :
     '''
     Save an individual cutout image based on RA and Dec, and given the WCS
     information. Include basic information in the header such as total
@@ -416,6 +418,8 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
         DESCRIPTION.
     r_e : TYPE
         DESCRIPTION.
+    redshift : TYPE
+        DESCRIPTION.
     vmin : TYPE, optional
         DESCRIPTION. The default is None.
     vmax : TYPE, optional
@@ -437,6 +441,8 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     
     hdu = fits.PrimaryHDU(cutout.data)
     hdr = hdu.header
+    hdr['Z'] = redshift
+    hdr.comments['Z'] = 'object redshift--from table'
     hdr['EXPTIME'] = exposure
     hdr.comments['EXPTIME'] = 'exposure duration (seconds)--calculated'
     hdr['PHOTFNU'] = photfnu
