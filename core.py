@@ -330,7 +330,7 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     
     if write_regions :
         region_file = (cluster + '/' + cluster + 
-                       '_final_objects_flux_radius.reg')
+                       '_final_objects_R_e.reg')
         first = '# Region file format: DS9 version 4.1\n'
         second = ('global color=red width=2 select=1 ' +
                   'edit=1 move=1 delete=1 include=1\n')
