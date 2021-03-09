@@ -7,9 +7,11 @@ from astropy.table import Table
 
 cluster = 'a2744'
 outDir = cluster + '/h5/'
-os.mkdir(outDir) # ensure the output directory for the results is available
 filterFile = cluster + '/filters.txt'
 photometries = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster, cluster)
+
+os.makedirs(outDir, exist_ok=True) # ensure the output directory for the
+                                   # results is available
 
 # get a list of fits files containing photometric data for all vorbins for
 # a given galaxy, as denoted by ID
@@ -23,7 +25,7 @@ for file in tables :
     
     # create the output directory for the given galaxy
     outGal = '{}{}/'.format(outDir, ID)
-    os.mkdir(outGal)
+    os.makedirs(outGal, exist_ok=True)
     
     for vorbin in vorbins : # loop over all the vorbins in the table
         if table['use'][vorbin] : # complete SED fitting for useable vorbins
