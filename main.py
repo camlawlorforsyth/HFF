@@ -28,7 +28,7 @@ def main() :
     
     # then determine the flux for every vorbin for each galaxy, saving the
     # photometry for each galaxy into a separate file
-    photometry.determine_fluxes('a2744/vorbins/', 'a2744/cutouts/',
+    photometry.determine_fluxes('a2744/bins/', 'a2744/cutouts/',
                                 'a2744/photometry/', a2744.filters)
     
     # then on linux, move to the `hff/` directory, and run

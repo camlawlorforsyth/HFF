@@ -1,4 +1,5 @@
 
+import errno
 import numpy as np
 
 import astropy.constants as const
@@ -95,18 +96,35 @@ class Cluster :
                     rms = dictionary.get(filt).get('rms')
                     noise = np.sqrt(science/(exposure.value) + rms**2)
                     id_string = (str(ID.data)).strip('[]')
+                    
+                    # science file
                     outfile = '{}cutouts/{}_ID_{}_{}.fits'.format(self.outDir,
-                                                          self.name, id_string,
-                                                          filt)
+                        self.name, id_string, filt)
                     save_cutout(ra, dec, extent*r_e*scale, science, wcs,
                                 outfile, exposure.value, photfnu.value,
                                 scale.value, rms, r_e.value[0], redshift[0],
                                 sma[0], smb[0], pa[0])
-                    noise_outfile = ('{}cutouts/{}_ID_{}_{}_noise.fits'.format(
-                        self.outDir,self.name, id_string, filt))
+                    
+                    # noise file
+                    noise_outfile = '{}cutouts/{}_ID_{}_{}_noise.fits'.format(
+                        self.outDir, self.name, id_string, filt)
                     save_cutout(ra, dec, extent*r_e*scale, noise, wcs,
                                 noise_outfile, exposure.value, photfnu.value,
                                 scale.value, rms, r_e.value[0], redshift[0],
                                 sma[0], smb[0], pa[0])
+                    
+                    # segmentation map
+                    with fits.open(self.segPath) as hdu :
+                        segMap = hdu[0].data
+                    segmap_outfile = '{}cutouts/{}_ID_{}_segmap.fits'.format(
+                        self.outDir, self.name, id_string)
+                    try :
+                        save_cutout(ra, dec, extent*r_e*scale, segMap, wcs,
+                                    segmap_outfile, -999, -999, scale.value,
+                                    -999, r_e.value[0], redshift[0],
+                                    sma[0], smb[0], pa[0])
+                    except OSError as error :
+                        if error.errno == errno.EEXIST :
+                            pass
         
         return

@@ -41,18 +41,26 @@ def bin_all(inDir, outDir):
         file = file.replace(os.sep, '/')
         noise_files.append(file)
     
+    segmap_paths = '{}{}_ID_*_segmap.fits'.format(inDir, cluster)
+    segmap_file_list = glob.glob(segmap_paths) # get all F160W noise images
+    segmap_files = []
+    for file in segmap_file_list :
+        file = file.replace(os.sep, '/')
+        segmap_files.append(file)
+    
     for i in range(len(f160w_files)) :
         outfile = '{}{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
         
         (annuli_map, smas, smbs,
-         fluxes, errs, areas) = annuli_bins(f160w_files[i], noise_files[i])
+         fluxes, errs, nPixels) = annuli_bins(f160w_files[i], noise_files[i],
+                                            segmap_files[i], int(IDs[i]))
         
         np.savez(outfile, image=annuli_map, sma=smas, smb=smbs,
-                 flux=fluxes, err=errs, area=areas)
+                 flux=fluxes, err=errs, nPixels=nPixels)
     
     return
 
-def annuli_bins(f160w_file, noise_file) :
+def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
     '''
     Determine the annuli to use for subsequent analysis.
     
@@ -62,6 +70,10 @@ def annuli_bins(f160w_file, noise_file) :
         The F160W science file to bin.
     noise_file : string
         The noise file used in determining the bins.
+    segmap_file : string
+        Segmentation map file used to mask the above files.
+    ID : int
+        ID of the galaxy that is being binned.
     
     Returns
     -------
@@ -75,7 +87,7 @@ def annuli_bins(f160w_file, noise_file) :
         Flux contained in each annulus.
     errs : list
         Uncertainty on the flux contained in each annulus.
-    areas : list
+    nPixels_list : list
         Number of pixels contained in each annulus.
     
     '''
@@ -88,6 +100,7 @@ def annuli_bins(f160w_file, noise_file) :
     (sci, dim, photnu, r_e,
      redshift, sma, smb, pa_deg) = open_cutout(f160w_file)
     noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
+    segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
     
     eta = 1 - smb/sma # the ellipticity of the ellipse
     
@@ -95,24 +108,28 @@ def annuli_bins(f160w_file, noise_file) :
     xx, yy = np.indices(dim)
     x0, y0 = np.median(xx), np.median(yy)
     
-    '''
-    # ONLY SUM VALUES FOR THE GALAXY AS IDENTIFIED IN THE SEGMENTATION MAP
-    '''
+    # make a copy of the science image based on the segmentation map
+    new_sci = sci.copy()
+    new_sci[(segMap > 0) & (segMap != ID)] = 0 # don't mask out the sky
+    
+    # and for the noise image as well
+    new_noise = noise.copy()
+    new_noise[(segMap > 0) & (segMap != ID)] = 0
     
     dr = max(IR_pixel_scale/image_pixel_scale, 0.1*r_e)
     pa = np.pi*pa_deg/180
     
-    rins, fluxes, errs, annuli, areas = [], [], [], [], []
+    rins, fluxes, errs, annuli, nPixels_list = [], [], [], [], []
     while rin < 5*r_e :
         (flux, err, rnew,
-         annulus, nPixels) = compute_annuli(sci, noise, dim, (x0, y0), rin, dr,
-                                            eta, pa, targetSN)
+         annulus, nPixels) = compute_annuli(new_sci, new_noise, dim, (x0, y0),
+                                            rin, dr, eta, pa, targetSN)
         if rnew < 5*r_e :
             fluxes.append(flux)
             errs.append(err)
             rins.append(rnew)
             annuli.append(annulus)
-            areas.append(nPixels)
+            nPixels_list.append(nPixels)
         rin = rnew
     
     # create the annuli map for subsequent determination of photometric fluxes
@@ -125,7 +142,7 @@ def annuli_bins(f160w_file, noise_file) :
     smas = np.array(rins) # the semi-major axes of the inner annuli
     smbs = (1-eta)*smas # the semi-minor axes of the inner annuli
     
-    return annuli_map, smas, smbs, fluxes, errs, areas
+    return annuli_map, smas, smbs, fluxes, errs, nPixels_list
 
 def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
     '''
@@ -170,7 +187,7 @@ def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
     annulus, nPixels = elliptical_annulus(dim, xy, rin, dr, eta, pa)
     flux, err = compute_SNR(sci, noise, annulus)
     if flux/err < targetSN :
-        return compute_annuli(sci, noise, dim, xy, rin, dr+0.005, eta, pa,
+        return compute_annuli(sci, noise, dim, xy, rin, dr+0.01, eta, pa,
                               targetSN)
     else :
         return flux, err, rin+dr, annulus, nPixels
