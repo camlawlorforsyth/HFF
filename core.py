@@ -380,14 +380,17 @@ def open_cutout(infile) :
         redshift = hdr['Z']
         photfnu = hdr['PHOTFNU']
         R_e = hdr['R_e']
+        sma = hdr['SMA']
+        smb = hdr['SMB']
+        pa = hdr['PA']
         data = hdu[0].data
         dim = data.shape
     
-    return data, dim, photfnu, R_e, redshift
+    return data, dim, photfnu, R_e, redshift, sma, smb, pa
 
 def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
-                photfnu, scale, rms, r_e, redshift, vmin=None, vmax=None,
-                show=False) :
+                photfnu, scale, rms, r_e, redshift, sma, smb, pa,
+                vmin=None, vmax=None, show=False) :
     '''
     Save an individual cutout image based on RA and Dec, and given the WCS
     information. Include basic information in the header such as total
@@ -419,6 +422,12 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     r_e : TYPE
         DESCRIPTION.
     redshift : TYPE
+        DESCRIPTION.
+    sma : TYPE
+        DESCRIPTION.
+    smb : TYPE
+        DESCRIPTION.
+    pa : TYPE
         DESCRIPTION.
     vmin : TYPE, optional
         DESCRIPTION. The default is None.
@@ -453,6 +462,12 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     hdr.comments['RMS'] = 'RMS value of science image--calculated'
     hdr['R_E'] = r_e
     hdr.comments['R_E'] = 'Radius enclosing half the total flux, pixels'
+    hdr['SMA'] = sma
+    hdr.comments['SMA'] = 'Semi-major axis, pixels'
+    hdr['SMB'] = smb
+    hdr.comments['SMB'] = 'Semi-minor axis, pixels'
+    hdr['PA'] = pa
+    hdr.comments['PA'] = 'Posn. angle of SMA, count.-clock. from East'
     hdu.writeto(outfile)
     
     if show :

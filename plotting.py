@@ -10,6 +10,67 @@ warnings.filterwarnings('ignore', category=UserWarning)
 
 currentFig = 1
 
+def display_annuli(data, xy, rins, eta, theta, bad='black', cbar_label='',
+                   cmap=cm.gray, norm=LogNorm(), vmin=None, vmax=None) :
+    '''
+    Display the given image with various ellipses.
+    
+    Parameters
+    ----------
+    data : numpy.ndarray
+        The data that will displayed.
+    xy : tuple
+        Coordinates of the ellipse centers.
+    rins : list
+        List of semi-major axis values for the inner edge of each ellipse.
+    eta : float
+        Ellipticity of the ellipses.
+    theta : float
+        Position angle of the ellipses in degrees, measured anti-clockwise.
+    bad : string, optional
+        The 'bad' value to use when displaying the image. Default is 'black'.
+    cbar_label : string, optional
+        The colorbar label. Default is Empty.
+    cmap : matplotlib.colors.LinearSegmentedColormap, optional
+        The colormap to use. The default is cm.gray.
+    norm : matplotlib.colors.LogNorm, optional
+        The normalization to use. The default is LogNorm().
+    vmin : float, optional
+        The minimum value to use for colormap scaling. The default is None.
+    vmax : float, optional
+        The maximum value to use for colormap scaling. The default is None.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    import matplotlib.patches as mpatches
+    
+    global currentFig
+    fig = plt.figure(currentFig)
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = cmap
+    cmap.set_bad(bad, 1)
+    
+    frame = ax.imshow(data, origin='lower', cmap=cmap, norm=norm,
+                      vmin=vmin, vmax=vmax)
+    cbar = plt.colorbar(frame)
+    cbar.set_label(cbar_label)
+    
+    for rin in rins :
+        ellipse = mpatches.Ellipse(xy, 2*rin, 2*(1-eta)*rin, theta,
+                                   edgecolor='red', facecolor='none')
+        ax.add_patch(ellipse)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
 def display_image_with_wcs(data, wcs, vmin=None, vmax=None) :
     '''
     Display the given image data with the corresponding WCS.

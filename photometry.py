@@ -64,8 +64,9 @@ def determine_fluxes(vorbinDir, cutoutDir, outDir, filters) :
                                                    filt)
             noise_file = '{}{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
                                                            IDs[i], filt)
-            sci, dim, photfnu, r_e, redshift = open_cutout(sci_file)
-            noise, _, _, _, _ = open_cutout(noise_file)
+            (sci, dim, photfnu, r_e,
+             redshift, sma, smb, pa) = open_cutout(sci_file)
+            noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
             lumDist = cosmo.luminosity_distance(redshift)
             fluxes, uncerts, R_e, redshifts, lumDists = [], [], [], [], []
             for val in range(numBins) :

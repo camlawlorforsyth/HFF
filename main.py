@@ -1,7 +1,7 @@
 
 from cluster import Cluster
 import core
-import voronoi
+import binning # voronoi
 import photometry
 
 def main() :
@@ -23,7 +23,8 @@ def main() :
     a2744.save_cutouts()
     
     # now vorbin the cutouts for each galaxy and save the resulting files
-    voronoi.vorbin_all('a2744/cutouts/', 'a2744/vorbins/')
+    # voronoi.vorbin_all('a2744/cutouts/', 'a2744/vorbins/')
+    binning.bin_all('a2744/cutouts/', 'a2744/bins/')
     
     # then determine the flux for every vorbin for each galaxy, saving the
     # photometry for each galaxy into a separate file
