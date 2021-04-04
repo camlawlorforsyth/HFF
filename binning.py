@@ -51,12 +51,12 @@ def bin_all(inDir, outDir):
     for i in range(len(f160w_files)) :
         outfile = '{}{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
         
-        (annuli_map, smas, smbs,
-         fluxes, errs, nPixels) = annuli_bins(f160w_files[i], noise_files[i],
-                                            segmap_files[i], int(IDs[i]))
+        (annuli_map, smas, smbs, fluxes, errs,
+         nPixels, widths, pas) = annuli_bins(f160w_files[i], noise_files[i],
+                                             segmap_files[i], int(IDs[i]))
         
         np.savez(outfile, image=annuli_map, sma=smas, smb=smbs,
-                 flux=fluxes, err=errs, nPixels=nPixels)
+                 flux=fluxes, err=errs, nPixels=nPixels, width=widths, pa=pas)
     
     return
 
@@ -89,6 +89,10 @@ def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
         Uncertainty on the flux contained in each annulus.
     nPixels_list : list
         Number of pixels contained in each annulus.
+    widths : numpy.ndarray
+        Widths of each annulus.
+    pas : numpy.ndarray
+        Array of position angles for the annuli.
     
     '''
     
@@ -119,15 +123,16 @@ def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
     dr = max(IR_pixel_scale/image_pixel_scale, 0.1*r_e)
     pa = np.pi*pa_deg/180
     
-    rins, fluxes, errs, annuli, nPixels_list = [], [], [], [], []
+    rins, fluxes, errs, widths, annuli, nPixels_list = [], [], [], [], [], []
     while rin < 5*r_e :
-        (flux, err, rnew,
+        (flux, err, rnew, width,
          annulus, nPixels) = compute_annuli(new_sci, new_noise, dim, (x0, y0),
                                             rin, dr, eta, pa, targetSN)
         if rnew < 5*r_e :
             fluxes.append(flux)
             errs.append(err)
             rins.append(rnew)
+            widths.append(width)
             annuli.append(annulus)
             nPixels_list.append(nPixels)
         rin = rnew
@@ -141,8 +146,10 @@ def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
     
     smas = np.array(rins) # the semi-major axes of the inner annuli
     smbs = (1-eta)*smas # the semi-minor axes of the inner annuli
+    widths = np.array(widths)
+    pas = np.array([pa_deg]*len(smas))
     
-    return annuli_map, smas, smbs, fluxes, errs, nPixels_list
+    return annuli_map, smas, smbs, fluxes, errs, nPixels_list, widths, pas
 
 def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
     '''
@@ -177,6 +184,8 @@ def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
         Total uncertainty, added in quadrature, within the annulus.
     rnew : float
         The new inner semi-major axis to use for the next annulus.
+    dr : float
+        The width of the annulus.
     annulus : numpy.ndarray
         Array which corresponds to a given annulus.
     nPixels : int
@@ -190,7 +199,7 @@ def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
         return compute_annuli(sci, noise, dim, xy, rin, dr+0.01, eta, pa,
                               targetSN)
     else :
-        return flux, err, rin+dr, annulus, nPixels
+        return flux, err, rin+dr, dr, annulus, nPixels
 
 def compute_SNR(sci, noise, annulus) :
     '''

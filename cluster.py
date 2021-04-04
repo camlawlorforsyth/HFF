@@ -12,13 +12,11 @@ from core import save_cutout
 
 class Cluster :
     
-    def __init__(self, name, filters, files, segPath, outDir, finalObjsPath,
-                 rms) :
+    def __init__(self, name, filters, files, segPath, finalObjsPath, rms) :
         self.name = name
         self.filters = filters
         self.files = files
         self.segPath = segPath
-        self.outDir = outDir
         self.finalObjsPath = finalObjsPath
         self.rms = rms
     
@@ -65,7 +63,7 @@ class Cluster :
         
         '''
         
-        extent = 5
+        extent = 5 # maximum radius of image will be 5 times R_e
         
         sciObjs = Table.read(self.finalObjsPath)
         sciObjs = sciObjs[np.where(sciObjs['id'] == 5830)] # for testing
@@ -98,16 +96,16 @@ class Cluster :
                     id_string = (str(ID.data)).strip('[]')
                     
                     # science file
-                    outfile = '{}cutouts/{}_ID_{}_{}.fits'.format(self.outDir,
-                        self.name, id_string, filt)
+                    outfile = '{}/cutouts/{}_ID_{}_{}.fits'.format(
+                        self.name, self.name, id_string, filt)
                     save_cutout(ra, dec, extent*r_e*scale, science, wcs,
                                 outfile, exposure.value, photfnu.value,
                                 scale.value, rms, r_e.value[0], redshift[0],
                                 sma[0], smb[0], pa[0])
                     
                     # noise file
-                    noise_outfile = '{}cutouts/{}_ID_{}_{}_noise.fits'.format(
-                        self.outDir, self.name, id_string, filt)
+                    noise_outfile = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
+                        self.name, self.name, id_string, filt)
                     save_cutout(ra, dec, extent*r_e*scale, noise, wcs,
                                 noise_outfile, exposure.value, photfnu.value,
                                 scale.value, rms, r_e.value[0], redshift[0],
@@ -116,8 +114,8 @@ class Cluster :
                     # segmentation map
                     with fits.open(self.segPath) as hdu :
                         segMap = hdu[0].data
-                    segmap_outfile = '{}cutouts/{}_ID_{}_segmap.fits'.format(
-                        self.outDir, self.name, id_string)
+                    segmap_outfile = '{}/cutouts/{}_ID_{}_segmap.fits'.format(
+                        self.name, self.name, id_string)
                     try :
                         save_cutout(ra, dec, extent*r_e*scale, segMap, wcs,
                                     segmap_outfile, -999, -999, scale.value,

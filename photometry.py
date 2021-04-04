@@ -54,6 +54,7 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
         sma, smb = bin_data['sma'], bin_data['smb']
         flux, err = bin_data['flux'], bin_data['err']
         nPixels = bin_data['nPixels']
+        widths, PAs = bin_data['width'], bin_data['pa']
         
         numBins = np.nanmax(bins_image) + 1 # accounts for python 0-index
         
@@ -62,6 +63,7 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
         photometry['sma'], photometry['smb'] = sma, smb
         photometry['flux'], photometry['err'] = flux, err
         photometry['SN'], photometry['nPixels'] = flux/err, nPixels
+        photometry['width'], photometry['PA'] = widths, PAs
         
         for filt in filters :
             sci_file = '{}{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
@@ -87,7 +89,13 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
             
             lumDist = cosmo.luminosity_distance(redshift)
             
-            fluxes, uncerts, R_e, redshifts, lumDists = [], [], [], [], []
+            # save relevant information for running prospector into the table
+            length = len(range(int(numBins)))
+            photometry['R_e'] = [r_e]*length*u.pix
+            photometry['z'] = [redshift]*length
+            photometry['lumDist'] = [lumDist.value]*length*u.Mpc
+            
+            fluxes, uncerts = [], []
             for val in range(int(numBins)) :
                 mask = np.where(bins_image == val)
                 
@@ -96,19 +104,11 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
                 fluxes.append(flux)
                 
                 masked_noise = new_noise[mask]
-                uncert = photfnu*np.nansum(masked_noise)
+                uncert = photfnu*np.sqrt(np.nansum(np.square(masked_noise)))
                 uncerts.append(uncert)
-                
-                R_e.append(r_e)
-                redshifts.append(redshift)
-                lumDists.append(lumDist.value)
             
             photometry[filt + '_flux'] = fluxes*u.Jy
             photometry[filt + '_err'] = uncerts*u.Jy
-        
-        photometry['R_e'] = R_e*u.pix
-        photometry['z'] = redshifts
-        photometry['lumDist'] = lumDists*u.Mpc
         
         photometry.write(outfile)
     

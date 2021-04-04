@@ -5,35 +5,36 @@ import subprocess
 
 from astropy.table import Table
 
-cluster = 'a2744'
-outDir = cluster + '/h5/'
-filterFile = cluster + '/filters.txt'
-photometries = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster, cluster)
-
-os.makedirs(outDir, exist_ok=True) # ensure the output directory for the
-                                   # results is available
-
-# get a list of fits files containing photometric data for all vorbins for
-# a given galaxy, as denoted by ID
-tables = glob.glob(photometries)
-
-# loop over all the fits files in the directory
-for file in tables :
-    ID = file.split('_')[2] # the galaxy ID to fit the vorbins for
-    table = Table.read(file)
-    vorbins = table['vorbin'] # get a list of vorbin values
+clusters = ['a2744', 'a370', 'as1063', 'm416', 'm717', 'm1149']
+for cluster in clusters :
+    outDir = cluster + '/' + 'h5'
+    filterFile = cluster + '/' + 'filters.txt'
+    photometries = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
+                                                                  cluster)
     
-    # create the output directory for the given galaxy
-    outGal = '{}{}/'.format(outDir, ID)
-    os.makedirs(outGal, exist_ok=True)
+    os.makedirs(outDir, exist_ok=True) # ensure the output directory for the
+                                       # results is available
     
-    for vorbin in vorbins : # loop over all the vorbins in the table
-        if table['use'][vorbin] : # complete SED fitting for useable vorbins
+    # get a list of fits files containing photometric data for all bins for
+    # a given galaxy, as denoted by ID
+    tables = glob.glob(photometries)
+    
+    # loop over all the fits files in the directory
+    for file in tables :
+        ID = file.split('_')[2] # the galaxy ID to fit the bins for
+        table = Table.read(file)
+        bins = table['bin'] # get a list of bin values
+        
+        # create the output directory for the given galaxy
+        outGal = '{}/{}/'.format(outDir, ID)
+        os.makedirs(outGal, exist_ok=True)
+        
+        for binNum in bins : # loop over all the bins in the table
             
             # parameters necessary for fitting and writing output
-            redshift = table['z'][vorbin]
-            lumDist = table['lumDist'][vorbin]
-            outfile = '{}{}_ID_{}_BIN_{}'.format(outGal, cluster, ID, vorbin)
+            redshift = table['z'][binNum]
+            lumDist = table['lumDist'][binNum]
+            outfile = '{}{}_ID_{}_BIN_{}'.format(outGal, cluster, ID, binNum)
             
             # create argument list to pass to params.py
             args = ['python', 'params.py',
@@ -41,7 +42,7 @@ for file in tables :
                     '--luminosity_distance', str(lumDist),
                     '--infile', str(file),
                     '--filterFile', str(filterFile),
-                    '--vorbinNum', str(int(vorbin)),
+                    '--binNum', str(int(binNum)),
                     '--verbose', str(int(0)), # False
                     '--dynesty',
                     '--outfile', outfile]

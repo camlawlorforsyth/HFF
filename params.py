@@ -115,7 +115,7 @@ def build_noise(**extras) :
     
     return None, None
 
-def build_obs(infile=None, filterFile=None, vorbinNum=0, **kwargs) :
+def build_obs(infile=None, filterFile=None, binNum=0, **kwargs) :
     '''
     Construct the observations to use for fitting.
     
@@ -127,8 +127,8 @@ def build_obs(infile=None, filterFile=None, vorbinNum=0, **kwargs) :
         The uncertainties on the above fluxes. The default is None.
     filterset : list, optional
         The filters that the observations were taken in. The default is None.
-    vorbinNum : int, optional
-        The vorbin number for the galaxy. The default is 0.
+    binNum : int, optional
+        The bin number for the galaxy. The default is 0.
     **kwargs : kwargs
         Additional keyword arguments.
         
@@ -157,8 +157,8 @@ def build_obs(infile=None, filterFile=None, vorbinNum=0, **kwargs) :
     flux_table = table[flux_cols] # create a table using only the flux columns
     err_table = table[err_cols] # create a table using only the err columns
     
-    fluxes = list(flux_table[vorbinNum]) # get the fluxes for the vorbin
-    errs = list(err_table[vorbinNum]) # get the uncertainties for the vorbin
+    fluxes = list(flux_table[binNum]) # get the fluxes for the bin
+    errs = list(err_table[binNum]) # get the uncertainties for the bin
     
     # build output dictionary.
     obs = {}
@@ -179,8 +179,8 @@ def build_obs(infile=None, filterFile=None, vorbinNum=0, **kwargs) :
     obs['unc'] = None
     obs['mask'] = None
     
-    # add unessential bonus info. This will be stored in output
-    obs['vorbinNum'] = vorbinNum
+    # add unessential bonus info. This will be stored in output.
+    obs['binNum'] = binNum
     
     # this ensures all required keys are present and adds extra useful info
     obs = fix_obs(obs)
@@ -240,8 +240,8 @@ if __name__ == '__main__' :
                         help='File to get the photometry from.')
     parser.add_argument('--filterFile', type=str,
                         help='File containing filterset information.')
-    parser.add_argument('--vorbinNum', type=int,
-                        help='Vorbin number for the galaxy.')
+    parser.add_argument('--binNum', type=int,
+                        help='Bin number for the galaxy.')
     
     args = parser.parse_args()
     run_params = vars(args)

@@ -7,15 +7,22 @@ from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.table import hstack, join, Table
 import astropy.units as u
-from scipy import stats
+from scipy import interpolate, stats
 
 import plotting as plt
 
 def build_par_file_WFC3(filt, wave, throughput) :
     
-    kfilter = len(wave)*['KFILTER']
-    par_table = Table([kfilter, wave, throughput],
-                      names=('kfilt', 'wave', 'thru'))
+    # sedpy needs evenly spaced wavelength arrays and corresponding throughputs
+    interpolated = interpolate.interp1d(wave, throughput)
+    start, end = wave[0], wave[-1]
+    
+    # evenly sample the wavelengths and use interpolated throughput values
+    wave_new = np.arange(start, end+1, 1)
+    throughput_new = interpolated(wave_new)
+    
+    # write the corresponding tables
+    par_table = Table([wave_new, throughput_new], names=('wave', 'thru'))
     par_table.write('hff_filters/hff_' + filt + '.par',
                     format='ascii.no_header', overwrite=False)
     
@@ -24,17 +31,33 @@ def build_par_file_WFC3(filt, wave, throughput) :
 def build_par_file_ACS(table) :
     
     cols = table.colnames
+    
+    # loop over all the column pairs in the table
     for i in range(0, len(cols), 2) :
         filt = cols[i].split('_')[0]
-        kfilter = len(table[cols[i]])*['KFILTER']
-        par_table = Table([kfilter, table[cols[i]], table[cols[i+1]]],
-                          names=('kfilt', 'wave', 'thru'))
-        par_table.write('hff_filters/hff_' + filt + '.par',
-                        format='ascii.no_header', overwrite=False)
+        
+        # get the non-masked entries
+        wave = table[cols[i]]
+        wave = np.array(wave[wave > 0])
+        throughput = table[cols[i+1]]
+        throughput = np.array(throughput[throughput > 0])
+        
+        # pad the wavelength arrays and throughputs with leading/trailing zeros
+        wave_front = np.arange(wave[0]-100, wave[0], 1)
+        wave_end = np.arange(wave[-1], wave[-1]+100, 1)
+        zeros_front = np.zeros(wave_front.shape)
+        zeros_end = np.zeros(wave_end.shape)
+        
+        # create final arrays
+        wave = np.concatenate([wave_front, wave, wave_end])
+        throughput = np.concatenate([zeros_front, throughput, zeros_end])
+        
+        # interpolate values and write files
+        build_par_file_WFC3(filt, np.float64(wave), throughput)
     
     return
 
-def build_filter_table(display=False, write=False) :
+def build_filter_table(save_par=False, display=False, write=False) :
     '''
     Build the filter table which includes wavelength arrays and transmission
     arrays for all the filters included in the Hubble Frontier Fields
@@ -71,7 +94,10 @@ def build_filter_table(display=False, write=False) :
         thru1 = table['Chip 1 Throughput']
         thru2 = table['Chip 2 Throughput']
         thru = (thru1 + thru2)/2
-        # build_par_file_WFC3(filt, wave, thru)
+        
+        if save_par :
+            build_par_file_WFC3(filt, wave, thru)
+        
         filt_table = Table([wave, thru], names=(filt+'_wave', filt+'_thru'))
         UVIS_tables.append(filt_table)
     UVIS_table = hstack(UVIS_tables)
@@ -81,7 +107,8 @@ def build_filter_table(display=False, write=False) :
     # (Johnson B, SDSS g, Johnson V, Broad V, SDSS r, SDSS i, Broad I, SDSS z)
     ACS = filters[0]
     ACS_table = Table.read('hst_filters/' + ACS, format='csv')
-    # build_par_file_ACS(ACS_table)
+    if save_par :
+        build_par_file_ACS(ACS_table)
     
     # HST WFC3/IR (Wide Field Camera 3 - near-IR channel)
     # F105W, F110W, F125W, F140W, F160W
@@ -93,7 +120,10 @@ def build_filter_table(display=False, write=False) :
         filt = file[:5]
         wave = table['Wave (Angstroms)']
         thru = table['Throughput']
-        # build_par_file_WFC3(filt, wave, thru)
+        
+        if save_par :
+            build_par_file_WFC3(filt, wave, thru)
+        
         filt_table = Table([wave, thru], names=(filt+'_wave', filt+'_thru'))
         IR_tables.append(filt_table)
     IR_table = hstack(IR_tables)
@@ -474,16 +504,3 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
         plt.display_image_simple(cutout.data, vmin=vmin, vmax=vmax)
     
     return
-
-# still necessary?
-# determine_final_objects('abell_370', 'id', 0.375)
-# determine_final_objects('abell_S1063', 'id', 0.348)
-# determine_final_objects('abell_2744', 'id', 0.308, plot=True)
-# determine_final_objects('macs_0416', 'id', 0.392)
-# determine_final_objects('macs_0717', 'id', 0.5458)
-# determine_final_objects('macs_1149', 'id', 0.543)
-
-# still necessary?
-# combine_UVJ('abell2744clu_catalogs', 'abell2744clu_v3.9', 153, 155, 161)
-# plt.hst_transmission_curves(build_filter_table())
-# build_filter_table()
