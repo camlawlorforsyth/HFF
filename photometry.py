@@ -11,7 +11,7 @@ from core import open_cutout
 
 cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
-def determine_fluxes(binDir, cutoutDir, outDir, filters) :
+def determine_fluxes(cluster, filters) :
     '''
     Determine the flux in every Voronoi bin for a given object for a given
     filter. Then move to the next subsequent filter and determine the fluxes
@@ -21,14 +21,10 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
     
     Parameters
     ----------
-    vorbinDir : TYPE
-        DESCRIPTION.
-    cutoutDir : TYPE
-        DESCRIPTION.
-    outDir : TYPE
-        DESCRIPTION.
-    filters : TYPE
-        DESCRIPTION.
+    cluster : string
+        Operate on the files of this cluster.
+    filters : list
+        The filterset for the cluster.
     
     Returns
     -------
@@ -36,9 +32,11 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
     
     '''
     
-    cluster = binDir[:-6] # get the name of the cluster from the input directory
+    binDir = '{}/bins'.format(cluster)
+    cutoutDir = '{}/cutouts'.format(cluster)
+    outDir = '{}/photometry'.format(cluster)
     
-    bin_paths = '{}{}_ID_*_annuli.npz'.format(binDir, cluster)
+    bin_paths = '{}/{}_ID_*_annuli.npz'.format(binDir, cluster)
     bin_file_list = glob.glob(bin_paths) # get all bin numpy files
     bin_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
     for file in bin_file_list :
@@ -46,8 +44,11 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
         bin_files.append(file)
         IDs.append(file.split('_')[2])
     
+    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
+        # output directory for the cutouts is available
+    
     for i in range(len(bin_files)) :
-        outfile = '{}{}_ID_{}_photometry.fits'.format(outDir, cluster, IDs[i])
+        outfile = '{}/{}_ID_{}_photometry.fits'.format(outDir, cluster, IDs[i])
         
         bin_data = np.load(bin_files[i])
         bins_image = bin_data['image']
@@ -66,12 +67,12 @@ def determine_fluxes(binDir, cutoutDir, outDir, filters) :
         photometry['width'], photometry['PA'] = widths, PAs
         
         for filt in filters :
-            sci_file = '{}{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
-                                                   filt)
-            noise_file = '{}{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
-                                                           IDs[i], filt)
-            segmap_file = '{}{}_ID_{}_segmap.fits'.format(cutoutDir, cluster,
-                                                          IDs[i])
+            sci_file = '{}/{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
+                                                    filt)
+            noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
+                                                            IDs[i], filt)
+            segmap_file = '{}/{}_ID_{}_segmap.fits'.format(cutoutDir, cluster,
+                                                           IDs[i])
             
             (sci, dim, photfnu, r_e,
              redshift, sma, smb, pa) = open_cutout(sci_file)

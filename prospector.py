@@ -5,7 +5,7 @@ import subprocess
 
 from astropy.table import Table
 
-clusters = ['a2744', 'a370', 'as1063', 'm416', 'm717', 'm1149']
+clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
 for cluster in clusters :
     outDir = cluster + '/' + 'h5'
     filterFile = cluster + '/' + 'filters.txt'
@@ -26,7 +26,7 @@ for cluster in clusters :
         bins = table['bin'] # get a list of bin values
         
         # create the output directory for the given galaxy
-        outGal = '{}/{}/'.format(outDir, ID)
+        outGal = '{}/{}'.format(outDir, ID)
         os.makedirs(outGal, exist_ok=True)
         
         for binNum in bins : # loop over all the bins in the table
@@ -34,7 +34,7 @@ for cluster in clusters :
             # parameters necessary for fitting and writing output
             redshift = table['z'][binNum]
             lumDist = table['lumDist'][binNum]
-            outfile = '{}{}_ID_{}_BIN_{}'.format(outGal, cluster, ID, binNum)
+            outfile = '{}/{}_ID_{}_BIN_{}'.format(outGal, cluster, ID, binNum)
             
             # create argument list to pass to params.py
             args = ['python', 'params.py',

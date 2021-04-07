@@ -67,7 +67,7 @@ def vorbin_data(signal, noise, dim, targetSN, display=False, printraw=False) :
     
     return xs, ys, binNum, xbar, ybar, sn, npixels
 
-def vorbin_all(inDir, outDir):
+def vorbin_all(cluster):
     '''
     Open the F160W cutout image and compute the Voronoi bins. Save the
     image of the Voronoi bins for subsequent masking, as well as the locations
@@ -75,10 +75,8 @@ def vorbin_all(inDir, outDir):
     
     Parameters
     ----------
-    inDir : string
-        The input directory to access files from.
-    outDir : string
-        The output directory to save files to.
+    cluster : string
+        Operate on the files of this cluster.
     
     Returns
     -------
@@ -86,10 +84,11 @@ def vorbin_all(inDir, outDir):
     
     '''
     
-    cluster = inDir[:-9] # get the name of the cluster from the input directory
+    inDir = '{}/cutouts'.format(cluster)
+    outDir = '{}/vorbins'.format(cluster)
     SNR = 400 # the target signal-to-noise ratio to use
     
-    f160w_paths = '{}{}_ID_*_f160w.fits'.format(inDir, cluster)
+    f160w_paths = '{}/{}_ID_*_f160w.fits'.format(inDir, cluster)
     f160w_file_list = glob.glob(f160w_paths) # get all F160W images
     f160w_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
     for file in f160w_file_list :
@@ -97,15 +96,18 @@ def vorbin_all(inDir, outDir):
         f160w_files.append(file)
         IDs.append(file.split('_')[2])
     
-    noise_paths = '{}{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
+    noise_paths = '{}/{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
     noise_file_list = glob.glob(noise_paths) # get all F160W noise images
     noise_files = []
     for file in noise_file_list :
         file = file.replace(os.sep, '/')
         noise_files.append(file)
     
+    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
+        # output directory for the cutouts is available
+    
     for i in range(len(f160w_files)) :
-        outfile = '{}{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])
+        outfile = '{}/{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])
         (sci, dim, photnu, r_e,
          redshift, sma, smb, pa) = open_cutout(f160w_files[i])
         noise, _, _, _, _, _, _, _ = open_cutout(noise_files[i])

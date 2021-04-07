@@ -342,12 +342,11 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     if title :
-        strings = title.split('_')
-        if strings[0] == 'abell' :
-            plot_title = 'Abell ' + strings[1]
-        if strings[0] == 'macs' :
-            plot_title = 'MACS J' + strings[1]
-    ax.set_title(plot_title, fontsize=18)
+        if title[0] == 'a' :
+            title = 'Abell ' + title[1:]
+        if title[0] == 'm' :
+            title = 'MACS J' + title[1:]
+    ax.set_title(title, fontsize=18)
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
@@ -442,7 +441,6 @@ def plot_transmission_curves(wavelengths, throughputs, labels, colors,
     
     plt.tight_layout()
     plt.show()
-    # plt.legend()
     
     return
 
@@ -484,26 +482,40 @@ def plot_UVJ(xs, ys, xlabel=None, ylabel=None, title=None,
     plt.clf()
     ax = fig.add_subplot(111)
     
-    ax.scatter(xs, ys, color='b', marker='o')
+    slope, intercept = 0.88, 0.59
+    first_knee, second_knee = (1.3-0.59)/0.88, 1.5
     
-    ax.hlines(1.3, xmin, (1.3-0.59)/0.88, ls='-', color='k', zorder=5)
-    divide_x = np.linspace((1.3-0.59)/0.88, 1.5, 100)
-    divide_y = 0.88*divide_x + 0.59
+    ax.hlines(1.3, xmin, first_knee, ls='-', color='k', zorder=5)
+    divide_x = np.linspace(first_knee, second_knee, 1000)
+    divide_y = slope*divide_x + intercept
     ax.plot(divide_x, divide_y, 'k-')
-    ax.vlines(1.5, 0.88*1.5+0.59, ymax, ls='-', color='k', zorder=5)
+    ax.vlines(second_knee, slope*second_knee + intercept, ymax,
+              ls='-', color='k', zorder=5)
+    
+    # the corner region where the quiescent galaxies reside
+    corner = ( ((xs <= first_knee) & (ys >= 1.3)) |
+               ( ((xs >= first_knee) & (xs <= second_knee))
+                 & (ys >= slope*xs + intercept)) )
+    
+    # divide the objects into their regions
+    q_x, q_y = xs[corner], ys[corner]
+    sf_x, sf_y = xs[~corner], ys[~corner]
+    
+    ax.scatter(q_x, q_y, color='r', marker='o', label='Quiescent')
+    ax.scatter(sf_x, sf_y, color='b', marker='o', label='Star Forming')
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     if title :
-        strings = title.split('_')
-        if strings[0] == 'abell' :
-            plot_title = 'Abell ' + strings[1]
-        if strings[0] == 'macs' :
-            plot_title = 'MACS J' + strings[1]
-    ax.set_title(plot_title, fontsize=18)
+        if title[0] == 'a' :
+            title = 'Abell ' + title[1:]
+        if title[0] == 'm' :
+            title = 'MACS J' + title[1:]
+    ax.set_title(title, fontsize=18)
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
+    ax.legend(loc='lower right')
     
     plt.tight_layout()
     plt.show()
@@ -559,12 +571,11 @@ def plot_UVJ_hist(xs, ys, xlabel=None, ylabel=None, title=None,
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     if title :
-        strings = title.split('_')
-        if strings[0] == 'abell' :
-            plot_title = 'Abell ' + strings[1]
-        if strings[0] == 'macs' :
-            plot_title = 'MACS J' + strings[1]
-    ax.set_title(plot_title, fontsize=18)
+        if title[0] == 'a' :
+            title = 'Abell ' + title[1:]
+        if title[0] == 'm' :
+            title = 'MACS J' + title[1:]
+    ax.set_title(title, fontsize=18)
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)

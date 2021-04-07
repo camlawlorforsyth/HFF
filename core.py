@@ -23,7 +23,7 @@ def build_par_file_WFC3(filt, wave, throughput) :
     
     # write the corresponding tables
     par_table = Table([wave_new, throughput_new], names=('wave', 'thru'))
-    par_table.write('hff_filters/hff_' + filt + '.par',
+    par_table.write('hff_filters/hff_{}.par'.format(filt),
                     format='ascii.no_header', overwrite=False)
     
     return
@@ -86,7 +86,7 @@ def build_filter_table(save_par=False, display=False, write=False) :
     UVIS = filters[6:]
     UVIS_tables = []
     for file in UVIS :
-        table = Table.read('hst_filters/' + file, format='csv')
+        table = Table.read('hst_filters/{}'.format(file), format='csv')
         filt = file[:5]
         wave1 = table['Chip 1 Wave (Angstroms)']
         wave2 = table['Chip 2 Wave (Angstroms)']
@@ -106,7 +106,7 @@ def build_filter_table(save_par=False, display=False, write=False) :
     # F435W, F475W, F555W, F606W, F625W, F775W, F814W, F850LP
     # (Johnson B, SDSS g, Johnson V, Broad V, SDSS r, SDSS i, Broad I, SDSS z)
     ACS = filters[0]
-    ACS_table = Table.read('hst_filters/' + ACS, format='csv')
+    ACS_table = Table.read('hst_filters/{}'.format(ACS), format='csv')
     if save_par :
         build_par_file_ACS(ACS_table)
     
@@ -116,7 +116,7 @@ def build_filter_table(save_par=False, display=False, write=False) :
     IR = filters[1:6]
     IR_tables = []
     for file in IR :
-        table = Table.read('hst_filters/' + file, format='csv')
+        table = Table.read('hst_filters/{}'.format(file), format='csv')
         filt = file[:5]
         wave = table['Wave (Angstroms)']
         thru = table['Throughput']
@@ -165,10 +165,10 @@ def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
     
     '''
     
-    direc = 'catalogs/' + first_path + '/eazy/' + second_path + '/'
-    U_file = direc + second_path + ('.%s' % U_filtnum) + '.rf'
-    V_file = direc + second_path + ('.%s' % V_filtnum) + '.rf'
-    J_file = direc + second_path + ('.%s' % J_filtnum) + '.rf'
+    direc = 'catalogs/{}/eazy/{}'.format(first_path, second_path)
+    U_file = '{}/{}.{}.rf'.format(direc, second_path, str(U_filtnum))
+    V_file = '{}/{}.{}.rf'.format(direc, second_path, str(V_filtnum))
+    J_file = '{}/{}.{}.rf'.format(direc, second_path, str(J_filtnum))
     
     U_tab = Table.read(U_file, format='ascii')
     V_tab = Table.read(V_file, format='ascii')
@@ -219,8 +219,8 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
     '''
     
     # read in the data in the two files
-    fastoutput = Table.read('catalogs/' + cluster + '_cluster_fastoutput.fits')
-    photometry = Table.read('catalogs/' + cluster + '_cluster_photometry.fits')
+    fastoutput = Table.read('catalogs/{}_fastoutput.fits'.format(cluster))
+    photometry = Table.read('catalogs/{}_photometry.fits'.format(cluster))
     
     # join the data based on a specific key
     combined = join(fastoutput, photometry, keys=key)
@@ -314,7 +314,8 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
     return final_objs
 
 def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
-                              U_filtnum, V_filtnum, J_filtnum, plotuvj=False,
+                              U_filtnum, V_filtnum, J_filtnum,
+                              plot_all=False, plot_uvj=False,
                               write_final_objs=False, write_regions=False) :
     '''
     
@@ -337,7 +338,9 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
         DESCRIPTION.
     J_filtnum : TYPE
         DESCRIPTION.
-    plotuvj : TYPE, optional
+    plot_all : TYPE, optional
+        DESCRIPTION. The default is False.
+    plot_uvj : TYPE, optional
         DESCRIPTION. The default is False.
     write_final_objs : TYPE, optional
         DESCRIPTION. The default is False.
@@ -350,17 +353,34 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     
     '''
     
-    final_objs = determine_final_objects(cluster, key, redshift)
-    UVJ = combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
-                      plotuvj_hist=False)
+    final_objs = determine_final_objects(cluster, key, redshift, plot=plot_all)
+    UVJ = combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum)
     final = join(final_objs, UVJ, keys='id')
     
+    # create a column describing the position on the UVJ diagram
+    xs, ys = final['M_AB_V']-final['M_AB_J'], final['M_AB_U']-final['M_AB_V']
+    slope, intercept = 0.88, 0.59
+    first_knee, second_knee = (1.3-0.59)/0.88, 1.5
+    corner = ( ((xs <= first_knee) & (ys >= 1.3)) |
+               ( ((xs >= first_knee) & (xs <= second_knee))
+                 & (ys >= slope*xs + intercept)) )
+    UVJ_type = np.empty(len(final), dtype=str)
+    UVJ_type[corner], UVJ_type[~corner] = 'Q', 'S'
+    UVJ_type  = np.char.replace(UVJ_type, 'S', 'SF')
+    final['UVJ'] = UVJ_type
+    
+    if plot_uvj :
+        plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
+                     final['M_AB_U'] - final['M_AB_V'],
+                     xlabel=r'$V - J$', ylabel=r'$U - V$', title=cluster,
+                     xmin=0, xmax=1.9, ymin=0, ymax=2.4)
+    
     if write_final_objs :
-        final.write(cluster + '/' + cluster + '_final_objects.fits')
+        final_objs_file = '{}/{}_final_objects.fits'.format(cluster, cluster)
+        final.write(final_objs_file)
     
     if write_regions :
-        region_file = (cluster + '/' + cluster + 
-                       '_final_objects_R_e.reg')
+        region_file = '{}/{}_final_objects_R_e.reg'.format(cluster, cluster)
         first = '# Region file format: DS9 version 4.1\n'
         second = ('global color=red width=2 select=1 ' +
                   'edit=1 move=1 delete=1 include=1\n')
@@ -369,18 +389,11 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
             file.write(first)
             file.write(second)
             file.write(third)
-            for i in range(len(final)) :
-                string = ('circle(' + str(final['ra'][i]) + ',' +
-                          str(final['dec'][i]) + ',' +
-                          str(final['flux_radius'][i]*0.06) + '") # ' +
-                          str(final['id'][i]) + '\n' )
+            for i in range(len(final)) :                
+                string = 'circle({},{},{}") # {} \n'.format(
+                    str(final['ra'][i]), str(final['dec'][i]),
+                    str(final['flux_radius'][i]*0.06), str(final['id'][i]))
                 file.write(string)
-    
-    if plotuvj :
-        plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
-                     final['M_AB_U'] - final['M_AB_V'],
-                     xlabel=r'$V - J$', ylabel=r'$U - V$', title=cluster,
-                     xmin=0, xmax=1.9, ymin=0, ymax=2.4)
     
     return
 

@@ -5,7 +5,7 @@ import numpy as np
 
 from core import open_cutout
 
-def bin_all(inDir, outDir):
+def bin_all(cluster):
     '''
     Bin all the F160W cutout images using elliptical annuli. Save the image
     of the annuli bins for subsequent masking, as well as other useful
@@ -13,10 +13,8 @@ def bin_all(inDir, outDir):
     
     Parameters
     ----------
-    inDir : string
-        The input directory to access files from.
-    outDir : string
-        The output directory to save files to.
+    cluster : string
+        Operate on the files of this cluster.
     
     Returns
     -------
@@ -24,9 +22,10 @@ def bin_all(inDir, outDir):
     
     '''
     
-    cluster = inDir[:-9] # get the name of the cluster from the input directory
+    inDir = '{}/cutouts'.format(cluster)
+    outDir = '{}/bins'.format(cluster)
     
-    f160w_paths = '{}{}_ID_*_f160w.fits'.format(inDir, cluster)
+    f160w_paths = '{}/{}_ID_*_f160w.fits'.format(inDir, cluster)
     f160w_file_list = glob.glob(f160w_paths) # get all F160W images
     f160w_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
     for file in f160w_file_list :
@@ -34,22 +33,25 @@ def bin_all(inDir, outDir):
         f160w_files.append(file)
         IDs.append(file.split('_')[2])
     
-    noise_paths = '{}{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
+    noise_paths = '{}/{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
     noise_file_list = glob.glob(noise_paths) # get all F160W noise images
     noise_files = []
     for file in noise_file_list :
         file = file.replace(os.sep, '/')
         noise_files.append(file)
     
-    segmap_paths = '{}{}_ID_*_segmap.fits'.format(inDir, cluster)
+    segmap_paths = '{}/{}_ID_*_segmap.fits'.format(inDir, cluster)
     segmap_file_list = glob.glob(segmap_paths) # get all F160W noise images
     segmap_files = []
     for file in segmap_file_list :
         file = file.replace(os.sep, '/')
         segmap_files.append(file)
     
+    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
+        # output directory for the cutouts is available
+    
     for i in range(len(f160w_files)) :
-        outfile = '{}{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
+        outfile = '{}/{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
         
         (annuli_map, smas, smbs, fluxes, errs,
          nPixels, widths, pas) = annuli_bins(f160w_files[i], noise_files[i],
