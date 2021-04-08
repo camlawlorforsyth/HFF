@@ -103,8 +103,8 @@ def vorbin_all(cluster):
         file = file.replace(os.sep, '/')
         noise_files.append(file)
     
-    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
-        # output directory for the cutouts is available
+    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
+        # directory for the vorbins is available
     
     for i in range(len(f160w_files)) :
         outfile = '{}/{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])

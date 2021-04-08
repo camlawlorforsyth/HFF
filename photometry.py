@@ -45,7 +45,7 @@ def determine_fluxes(cluster, filters) :
         IDs.append(file.split('_')[2])
     
     os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
-        # output directory for the cutouts is available
+        # output directory for the photometric tables is available
     
     for i in range(len(bin_files)) :
         outfile = '{}/{}_ID_{}_photometry.fits'.format(outDir, cluster, IDs[i])

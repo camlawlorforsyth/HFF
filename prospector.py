@@ -7,8 +7,8 @@ from astropy.table import Table
 
 clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
 for cluster in clusters :
-    outDir = cluster + '/' + 'h5'
-    filterFile = cluster + '/' + 'filters.txt'
+    outDir = '{}/h5'.format(cluster)
+    filterFile = '{}/filters.txt'.format(cluster)
     photometries = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
                                                                   cluster)
     

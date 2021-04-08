@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 
 from matplotlib import cm
 from matplotlib.colors import LogNorm
-import warnings
-warnings.filterwarnings('ignore', category=RuntimeWarning)
-warnings.filterwarnings('ignore', category=UserWarning)
 
 currentFig = 1
 
@@ -107,6 +104,9 @@ def display_image_with_wcs(data, wcs, vmin=None, vmax=None) :
     frame = ax.imshow(data, origin='lower', norm=LogNorm(), cmap=cmap,
                       vmin=vmin, vmax=vmax)
     
+    plt.tight_layout()
+    plt.show()
+    
     return
 
 def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray, 
@@ -163,7 +163,7 @@ def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray,
     
     return
 
-def histogram(data, label, bins=None) :
+def histogram(data, label, title=None, bins=None, log=False) :
     
     global currentFig
     fig = plt.figure(currentFig)
@@ -171,12 +171,22 @@ def histogram(data, label, bins=None) :
     plt.clf()
     ax = fig.add_subplot(111)
     
-    if bins :
-        ax.hist(data, bins=bins, log=True)
+    if bins and not log :
+        ax.hist(data, bins=bins)
+    elif bins and log :
+        ax.hist(data, bins=bins, log=log)
+    elif log and not bins :
+        ax.hist(data, log=log)
     else :
-        ax.hist(data, log=True)
+        ax.hist(data)
     
     ax.set_xlabel('%s' % label, fontsize = 15)
+    if title :
+        if title[0] == 'a' :
+            title = 'Abell ' + title[1:]
+        if title[0] == 'm' :
+            title = 'MACS J' + title[1:]
+    ax.set_title(title, fontsize=18)
     
     plt.tight_layout()
     plt.show()
@@ -203,42 +213,42 @@ def hst_transmission_curves(table, plot=True) :
     '''
     
     # wavelength arrays
-    f225w_wave = table['F225W_wave']
-    f275w_wave = table['F275W_wave']
-    f336w_wave = table['F336W_wave']
-    f390w_wave = table['F390W_wave']
-    f435w_wave = table['F435W_wave']
-    f475w_wave = table['F475W_wave']
-    f555w_wave = table['F555W_wave']
-    f606w_wave = table['F606W_wave']
-    f625w_wave = table['F625W_wave']
-    f775w_wave = table['F775W_wave']
-    f814w_wave = table['F814W_wave']
-    f850lp_wave = table['F850LP_wave']
-    f105w_wave = table['F105W_wave']
-    f110w_wave = table['F110W_wave']
-    f125w_wave = table['F125W_wave']
-    f140w_wave = table['F140W_wave']
-    f160w_wave = table['F160W_wave']
+    f225w_wave = table['f225w_wave']
+    f275w_wave = table['f275w_wave']
+    f336w_wave = table['f336w_wave']
+    f390w_wave = table['f390w_wave']
+    f435w_wave = table['f435w_wave']
+    f475w_wave = table['f475w_wave']
+    f555w_wave = table['f555w_wave']
+    f606w_wave = table['f606w_wave']
+    f625w_wave = table['f625w_wave']
+    f775w_wave = table['f775w_wave']
+    f814w_wave = table['f814w_wave']
+    f850lp_wave = table['f850lp_wave']
+    f105w_wave = table['f105w_wave']
+    f110w_wave = table['f110w_wave']
+    f125w_wave = table['f125w_wave']
+    f140w_wave = table['f140w_wave']
+    f160w_wave = table['f160w_wave']
     
     # transmission arrays
-    f225w_thru = table['F225W_thru']
-    f275w_thru = table['F275W_thru']
-    f336w_thru = table['F336W_thru']
-    f390w_thru = table['F390W_thru']
-    f435w_thru = table['F435W_thru']
-    f475w_thru = table['F475W_thru']
-    f555w_thru = table['F555W_thru']
-    f606w_thru = table['F606W_thru']
-    f625w_thru = table['F625W_thru']
-    f775w_thru = table['F775W_thru']
-    f814w_thru = table['F814W_thru']
-    f850lp_thru = table['F850LP_thru']
-    f105w_thru = table['F105W_thru']
-    f110w_thru = table['F110W_thru']
-    f125w_thru = table['F125W_thru']
-    f140w_thru = table['F140W_thru']
-    f160w_thru = table['F160W_thru']
+    f225w_thru = table['f225w_thru']
+    f275w_thru = table['f275w_thru']
+    f336w_thru = table['f336w_thru']
+    f390w_thru = table['f390w_thru']
+    f435w_thru = table['f435w_thru']
+    f475w_thru = table['f475w_thru']
+    f555w_thru = table['f555w_thru']
+    f606w_thru = table['f606w_thru']
+    f625w_thru = table['f625w_thru']
+    f775w_thru = table['f775w_thru']
+    f814w_thru = table['f814w_thru']
+    f850lp_thru = table['f850lp_thru']
+    f105w_thru = table['f105w_thru']
+    f110w_thru = table['f110w_thru']
+    f125w_thru = table['f125w_thru']
+    f140w_thru = table['f140w_thru']
+    f160w_thru = table['f160w_thru']
     
     wavelengths = [f225w_wave, f336w_wave, f475w_wave, f625w_wave, f775w_wave,
                    f850lp_wave, f125w_wave,
@@ -266,7 +276,9 @@ def hst_transmission_curves(table, plot=True) :
         plot_transmission_curves(wavelengths, filters, labels, colors,
                                  text_x, text_y, r'Wavelength ($\rm \AA$)',
                                  'Integrated System Throughput',
-                                 xmin=1750, xmax=17500, ymin=0, ymax=1.8)
+                                 xmin=1750, xmax=17500, ymin=0, ymax=1.8,
+                                 ytick_labels=[0.0, 0.2, 0.4, 0.6,
+                                               0.2, 0.4, 0.6, 0.2, 0.4, 0.6])
     
     return
 
@@ -316,7 +328,7 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     '''
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(9.5, 5.5))
+    fig = plt.figure(currentFig, figsize=(7.5, 5.5))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
@@ -324,7 +336,7 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     for i in range(len(array_of_xs)) :
         if colors[i] == 'cyan':
             edgecolor = 'k'
-            new_label = (labels[i] + ' (%g)') % length
+            new_label = '{} ({})'.format(labels[i], length)
             size = 100
         else :
             edgecolor = None
@@ -334,7 +346,7 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
                    c=colors[i], marker=markers[i], edgecolors=edgecolor,
                    label = new_label, zorder=i+3)
     
-    ax.axhline(redshift, color='k', ls='--', label=r'$z$=%g' %redshift)
+    ax.axhline(redshift, color='k', ls='--', label=r'$z$={}'.format(redshift))
     ax.axhline(redshift-0.05, color='b', ls='--', zorder=0,
                label=r'$z \pm 0.05$')
     ax.axhline(redshift+0.05, color='b', ls='--', zorder=0)
@@ -350,9 +362,8 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(bbox_to_anchor=(1.01, 1),
-              facecolor='whitesmoke', framealpha=1, fontsize=15,
-              loc='upper left')
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15) #, bbox_to_anchor=(1.01, 1))
     
     plt.tight_layout()
     plt.show()
@@ -360,7 +371,7 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     return
 
 def plot_transmission_curves(wavelengths, throughputs, labels, colors,
-                             text_x, text_y, xlabel, ylabel,
+                             text_x, text_y, xlabel, ylabel, ytick_labels=None,
                              xmin=None, xmax=None, ymin=None, ymax=None,
                              figsizewidth=15, figsizeheight=6.75) :
     '''
@@ -385,6 +396,8 @@ def plot_transmission_curves(wavelengths, throughputs, labels, colors,
         X-axis label. The default is None.
     ylabel : string
         Y-axis label. The default is None.
+    ytick_labels : list, optional
+        List of values to use as labels for the Y-axis. The default is None.
     xmin : float, optional
         X-axis lower limit. The default is None.
     xmax : float, optional
@@ -433,6 +446,10 @@ def plot_transmission_curves(wavelengths, throughputs, labels, colors,
     ax.axhline(0.6, ls='-', color='k', lw=1.5)
     ax.axhline(1.2, ls='-', color='k', lw=1.5)
     
+    if ytick_labels is not None :
+        ax.set_yticks(np.arange(0, 2, 0.2))
+        ax.set_yticklabels(np.asarray(ytick_labels, dtype=np.str))
+    
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     
@@ -477,7 +494,7 @@ def plot_UVJ(xs, ys, xlabel=None, ylabel=None, title=None,
     '''
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(8, 6))
+    fig = plt.figure(currentFig, figsize=(7.5, 5.5))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
@@ -500,9 +517,12 @@ def plot_UVJ(xs, ys, xlabel=None, ylabel=None, title=None,
     # divide the objects into their regions
     q_x, q_y = xs[corner], ys[corner]
     sf_x, sf_y = xs[~corner], ys[~corner]
+    q_length, sf_length = np.sum(corner), np.sum(~corner)
     
-    ax.scatter(q_x, q_y, color='r', marker='o', label='Quiescent')
-    ax.scatter(sf_x, sf_y, color='b', marker='o', label='Star Forming')
+    ax.scatter(q_x, q_y, color='r', marker='o',
+               label='Quiescent ({})'.format(q_length))
+    ax.scatter(sf_x, sf_y, color='b', marker='o',
+               label='Star Forming ({})'.format(sf_length))
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -515,7 +535,8 @@ def plot_UVJ(xs, ys, xlabel=None, ylabel=None, title=None,
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(loc='lower right')
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
     
     plt.tight_layout()
     plt.show()

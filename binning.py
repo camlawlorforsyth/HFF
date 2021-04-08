@@ -47,8 +47,8 @@ def bin_all(cluster):
         file = file.replace(os.sep, '/')
         segmap_files.append(file)
     
-    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
-        # output directory for the cutouts is available
+    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
+        # directory for the bins is available
     
     for i in range(len(f160w_files)) :
         outfile = '{}/{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
@@ -198,8 +198,11 @@ def compute_annuli(sci, noise, dim, xy, rin, dr, eta, pa, targetSN) :
     annulus, nPixels = elliptical_annulus(dim, xy, rin, dr, eta, pa)
     flux, err = compute_SNR(sci, noise, annulus)
     if flux/err < targetSN :
-        return compute_annuli(sci, noise, dim, xy, rin, dr+0.01, eta, pa,
-                              targetSN)
+        try :
+            return compute_annuli(sci, noise, dim, xy, rin, dr+0.01, eta, pa,
+                                  targetSN)
+        except RecursionError :
+            return np.nan, np.nan, np.nan, np.nan, np.nan, np.nan
     else :
         return flux, err, rin+dr, dr, annulus, nPixels
 
