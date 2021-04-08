@@ -77,7 +77,10 @@ def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
             photplam = hdr['PHOTPLAM']*u.AA
             photfnu = ((photplam**2)*
                        photflam/const.c).to(u.Jy*u.s/u.electron)
-            scale = hdr['D001SCAL']*u.arcsec/u.pixel
+            try :
+                scale = hdr['D001SCAL']*u.arcsec/u.pixel
+            except KeyError :
+                scale = 0.06*u.arcsec/u.pixel
             science = hdu[0].data
             
             for i in range(len(sci_objs)) :
