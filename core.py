@@ -2,11 +2,9 @@
 import os
 import numpy as np
 
-from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.table import hstack, join, Table
-import astropy.units as u
 from scipy import interpolate, stats
 
 import plotting as plt
@@ -390,7 +388,7 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
             file.write(second)
             file.write(third)
             for i in range(len(final)) :                
-                string = 'circle({},{},{}") # {} \n'.format(
+                string = 'circle({},{},{}") # {}\n'.format(
                     str(final['ra'][i]), str(final['dec'][i]),
                     str(final['flux_radius'][i]*0.06), str(final['id'][i]))
                 file.write(string)
@@ -431,9 +429,9 @@ def open_cutout(infile) :
     
     return data, dim, photfnu, R_e, redshift, sma, smb, pa
 
-def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
-                photfnu, scale, rms, r_e, redshift, sma, smb, pa,
-                vmin=None, vmax=None, show=False) :
+def save_cutout(xx, yy, angular_size, data, outfile, exposure, photfnu, scale,
+                rms, r_e, redshift, sma, smb, pa, vmin=None, vmax=None,
+                show=False) :
     '''
     Save an individual cutout image based on RA and Dec, and given the WCS
     information. Include basic information in the header such as total
@@ -449,8 +447,6 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     angular_size : TYPE
         DESCRIPTION.
     data : TYPE
-        DESCRIPTION.
-    wcs : TYPE
         DESCRIPTION.
     outfile : TYPE
         DESCRIPTION.
@@ -485,16 +481,14 @@ def save_cutout(sky_ra, sky_dec, angular_size, data, wcs, outfile, exposure,
     
     '''
     
-    position = SkyCoord(sky_ra, sky_dec, unit='deg', frame='icrs')
-    size = u.Quantity(angular_size.value, u.arcsec) # size along each axis
-    
-    cutout = Cutout2D(data, position, 2*size, wcs=wcs) # cutout will have
-        # radius of 'size'
+    position = (xx, yy) # the position of the cutout's center
+    size = np.ceil(angular_size.value) # size along half an axis, in pixels
+    cutout = Cutout2D(data, position, 2*size) # cutout has radius of 'size'
     
     hdu = fits.PrimaryHDU(cutout.data)
     hdr = hdu.header
     hdr['Z'] = redshift
-    hdr.comments['Z'] = 'object redshift--from table'
+    hdr.comments['Z'] = 'object spectroscopic redshift--from table'
     hdr['EXPTIME'] = exposure
     hdr.comments['EXPTIME'] = 'exposure duration (seconds)--calculated'
     hdr['PHOTFNU'] = photfnu
