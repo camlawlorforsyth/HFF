@@ -61,8 +61,12 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     '''
     
+    # CLUSTERS
+    
     if cluster == 'a370' :
         cluster_redshift = 0.375
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'abell370clu_catalogs', 'abell370clu_v3.9'
         misc = 'misc/abell370clu_misc/'
         
@@ -96,6 +100,8 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     if cluster == 'a1063' :
         cluster_redshift = 0.348
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'abell1063clu_catalogs', 'abell1063clu_v3.9'
         misc = 'misc/abell1063clu_misc/'
         
@@ -135,6 +141,8 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     if cluster == 'a2744' :
         cluster_redshift = 0.308
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'abell2744clu_catalogs', 'abell2744clu_v3.9'
         misc = 'misc/abell2744clu_misc/'
         
@@ -164,6 +172,8 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     if cluster == 'm416' :
         cluster_redshift = 0.396
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'macs0416clu_catalogs', 'macs0416clu_v3.9'
         misc = 'misc/macs0416clu_misc/'
         
@@ -203,6 +213,8 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     if cluster == 'm717' :
         cluster_redshift = 0.545
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'macs0717clu_catalogs', 'macs0717clu_v3.9'
         misc = 'misc/macs0717clu_misc/'
         
@@ -244,6 +256,8 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     if cluster == 'm1149' :
         cluster_redshift = 0.543
+        delta_z_lo, delta_z_hi = 0.05, 0.05
+        force_spec = True
         first_path, second_path = 'macs1149clu_catalogs', 'macs1149clu_v3.9'
         misc = 'misc/macs1149clu_misc/'
         
@@ -283,6 +297,179 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
                0.0038990153402697777,  0.003257393011206763,
                0.0040224046]
     
+    # PARALLEL FIELDS
+    
+    if cluster == 'a370par' :
+        cluster_redshift = 0.375
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'abell370par_catalogs', 'abell370par_v3.9'
+        misc = 'misc/abell370par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f814w', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/abell370par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'abell370par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell370par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell370par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell370par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell370par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell370par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'abell370par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.0002879315725811113, 0.0006588479431452871,
+               0.0004609912601621799, 0.0004973539250495655,
+               0.0007551672625252938, 0.0008845389370181092,
+               0.0016675465]
+    
+    if cluster == 'a1063par' :
+        cluster_redshift = 0.348
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'abell1063par_catalogs', 'abell1063par_v3.9'
+        misc = 'misc/abell1063par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f814w', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/abell1063par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'abell1063par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell1063par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell1063par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell1063par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell1063par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell1063par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'abell1063par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.00032123329138275986, 0.0009547855462766231,
+               0.0006668530222700777,  0.0007476069912216449,
+               0.001624492568493733,   0.0013993146495282485,
+               0.002274977]
+    
+    if cluster == 'a2744par' :
+        cluster_redshift = 0.308
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'abell2744par_catalogs', 'abell2744par_v3.9'
+        misc = 'misc/abell2744par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f814w', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/abell2744par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'abell2744par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell2744par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell2744par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell2744par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell2744par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'abell2744par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'abell2744par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.00030088137886912473, 0.007504526729094637,
+               0.0005139121423771429,  0.0010082562671031548,
+               0.0012806185239366261,  0.0017031766639187147,
+               0.0014054665]
+    
+    if cluster == 'm416par' :
+        cluster_redshift = 0.396
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'macs0416par_catalogs', 'macs0416par_v3.9'
+        misc = 'misc/macs0416par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f775w', 'f814w', 'f850lp', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/macs0416par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'macs0416par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f775w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f850lp_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0416par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'macs0416par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.00027932040174635613, 0.0005967158652637423,
+               0.02390073357236199,    0.0005743923830976937,
+               0.022203974558080843,   0.0007395513438158308,
+               0.0009526387529398551,  0.003227937807108707,
+               0.004652325]
+    
+    if cluster == 'm717par' :
+        cluster_redshift = 0.545
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'macs0717par_catalogs', 'macs0717par_v3.9'
+        misc = 'misc/macs0717par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f814w', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/macs0717par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'macs0717par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0717par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0717par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0717par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0717par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs0717par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'macs0717par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.015750940989686293,  4.199720503392165,
+               0.004962645535653485,  0.0007025983894983889,
+               0.0022194734390028562, 0.0011206273251126492,
+               0.0023070623]
+    
+    if cluster == 'm1149par' :
+        cluster_redshift = 0.543
+        delta_z_lo = cluster_redshift - (0.308-0.05)
+        delta_z_hi = (0.545+0.05) - cluster_redshift
+        force_spec = False
+        first_path, second_path = 'macs1149par_catalogs', 'macs1149par_v3.9'
+        misc = 'misc/macs1149par_misc/'
+        
+        filters = ['f435w', 'f606w', 'f814w', # ACS
+                   'f105w', 'f125w', 'f140w', 'f160w'] # IR
+        
+        segPath = misc + 'photometry/macs1149par_bcgs_out_detection_seg.fits.gz'
+        
+        psf_matched = misc + 'images/psf_matched/'
+        bcgs_out = misc + 'images/bcgs_out/'
+        paths = [psf_matched + 'macs1149par_bcgs_out_f435w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs1149par_bcgs_out_f606w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs1149par_bcgs_out_f814w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs1149par_bcgs_out_f105w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs1149par_bcgs_out_f125w_psf_bkg_drz.fits.gz',
+                 psf_matched + 'macs1149par_bcgs_out_f140w_psf_bkg_drz.fits.gz',
+                 bcgs_out + 'macs1149par_bcgs_out_f160w_bkg_drz_masked.fits.gz']
+        
+        RMS = [0.00029077593709390443, 0.006550107220462234,
+               0.0014776043499247677,  0.0006278033486495236,
+               0.000873025341883191,   0.0011653710498893614,
+               0.0014654497]
+    
     # START
     
     os.makedirs('{}'.format(cluster), exist_ok=True) # ensure the output
@@ -295,6 +482,9 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     core.determine_finalObjs_w_UVJ(cluster, 'id', cluster_redshift,
                                    first_path, second_path,
                                    U_filtnum, V_filtnum, J_filtnum,
+                                   redshift_tol_lo=delta_z_lo,
+                                   redshift_tol_hi=delta_z_hi,
+                                   z_spec=force_spec,
                                    plot_all=True, plot_uvj=True,
                                    write_final_objs=True, write_regions=True)
     if verbose :
