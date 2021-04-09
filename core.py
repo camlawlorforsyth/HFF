@@ -192,7 +192,8 @@ def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
     
     return table
 
-def determine_final_objects(cluster, key, redshift, plot=False) :
+def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
+                            redshift_tol_lo=0.05, redshift_tol_hi=0.05) :
     '''
     Determine the final objects to use for analysis, based on various quality
     flags included in the catalog tables. Also combine relevant data including
@@ -206,8 +207,14 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
         String describing the key which is used to join the data.
     redshift : float
         The redshift of the cluster.
+    z_spec : bool, optional
+        Flag to use spectroscopic redshifts. The default is True.
     plot : bool, optional
         Boolean to plot all objects on a scatter plot. The default is False.
+    redshift_tol_lo : float, optional
+        The low redshift tolerance to use. The default is 0.05.
+    redshift_tol_hi : float, optional
+        The high redshift tolerance to use. The default is 0.05.
     
     Returns
     -------
@@ -224,8 +231,12 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
     combined = join(fastoutput, photometry, keys=key)
     
     # mask the data based on a good spectroscopic redshift
-    mask = combined['z_spec'] > 0
-    combined = combined[mask]
+    if z_spec :
+        mask = combined['z_spec'] > 0
+        combined = combined[mask]
+    else :
+        mask = combined['z'] > 0
+        combined = combined[mask]
     
     # determine the band flags that are in the catalog
     band_flags = [string for string in combined.colnames if 'flag_F' in string]
@@ -252,37 +263,66 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
     # print(np.sort(list(set_of_sums)))
     
     # plot the final objects that will be used
-    final_objs_mask = ((combined['final_flag']==0) &
-                       (combined['lmass'] >= 8) &
-                       (combined['z_spec'] >= redshift-0.05) &
-                       (combined['z_spec'] <= redshift+0.05))
+    if z_spec :
+        final_objs_mask = ((combined['final_flag']==0) &
+                           (combined['lmass'] >= 8) &
+                           (combined['z_spec'] >= redshift - redshift_tol_lo) &
+                           (combined['z_spec'] <= redshift + redshift_tol_hi))
+    else :
+        final_objs_mask = ((combined['final_flag']==0) &
+                           (combined['lmass'] >= 8) &
+                           (combined['z'] >= redshift - redshift_tol_lo) &
+                           (combined['z'] <= redshift + redshift_tol_hi))
     final_objs = combined[final_objs_mask]
     final_objs_lmass = final_objs['lmass']
-    final_objs_z = final_objs['z_spec']
+    if z_spec :
+        final_objs_z = final_objs['z_spec']
+    else :
+        final_objs_z = final_objs['z']
     length_of_final = len(final_objs)
     
     # plot other objects with no flags, but with a stellar mass < 10^8 solMass
-    small_mass_mask = ((combined['final_flag']==0) &
-                       (combined['lmass'] < 8) &
-                       (combined['z_spec'] >= redshift-0.05) &
-                       (combined['z_spec'] <= redshift+0.05))
+    if z_spec :
+        small_mass_mask = ((combined['final_flag']==0) &
+                           (combined['lmass'] < 8) &
+                           (combined['z_spec'] >= redshift - redshift_tol_lo) &
+                           (combined['z_spec'] <= redshift + redshift_tol_hi))
+    else :
+        small_mass_mask = ((combined['final_flag']==0) &
+                           (combined['lmass'] < 8) &
+                           (combined['z'] >= redshift - redshift_tol_lo) &
+                           (combined['z'] <= redshift + redshift_tol_hi))
     small_mass_objs = combined[small_mass_mask]
     small_mass_objs_lmass = small_mass_objs['lmass']
-    small_mass_objs_z = small_mass_objs['z_spec']
+    if z_spec :
+        small_mass_objs_z = small_mass_objs['z_spec']
+    else :
+        small_mass_objs_z = small_mass_objs['z']
     
     # plot other objects with no flags, but beyond the redshift limits
-    no_flags_mask = ((combined['final_flag']==0) &
-                     ((combined['z_spec'] < redshift-0.05) |
-                      (combined['z_spec'] > redshift+0.05)))
+    if z_spec :
+        no_flags_mask = ((combined['final_flag']==0) &
+                         ((combined['z_spec'] < redshift - redshift_tol_lo) |
+                          (combined['z_spec'] > redshift + redshift_tol_hi)))
+    else :
+        no_flags_mask = ((combined['final_flag']==0) &
+                         ((combined['z'] < redshift - redshift_tol_lo) |
+                          (combined['z'] > redshift + redshift_tol_hi)))
     no_flags_objs = combined[no_flags_mask]
     no_flags_objs_lmass = no_flags_objs['lmass']
-    no_flags_objs_z = no_flags_objs['z_spec']
+    if z_spec :
+        no_flags_objs_z = no_flags_objs['z_spec']
+    else :
+        no_flags_objs_z = no_flags_objs['z']
     
     # plot objects which are likely BCGs
     likely_BCGs_mask = combined['final_flag']==4
     likely_BCGs = combined[likely_BCGs_mask]
     likely_BCGs_lmass = likely_BCGs['lmass']
-    likely_BCGs_z = likely_BCGs['z_spec']
+    if z_spec :
+        likely_BCGs_z = likely_BCGs['z_spec']
+    else :
+        likely_BCGs_z = likely_BCGs['z_spec']
     
     # plot all other types of objects: final_flag in [-99, -1, 2, 3]
     others_mask = ((combined['final_flag']==-99) |
@@ -292,7 +332,10 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
                    (combined['final_flag']==3))
     others = combined[others_mask]
     others_lmass = others['lmass']
-    others_z = others['z_spec']
+    if z_spec :
+        others_z = others['z_spec']
+    else :
+        others_z = others['z']
     
     if plot :
         # create the scatter plot
@@ -300,19 +343,23 @@ def determine_final_objects(cluster, key, redshift, plot=False) :
               small_mass_objs_lmass, final_objs_lmass]
         ys = [others_z, likely_BCGs_z, no_flags_objs_z,
               small_mass_objs_z, final_objs_z]
-        labels = ['flags', 'BCGs', r'$z~\notin~z_c \pm 0.05$',
+        labels = ['flags', 'BCGs', r'$z~\notin~z_c \pm \delta z$',
                   r'$M_* < 10^{8}~M_{\odot}$', 'final']
         styles = ['v', '^', 's', 's', 'o']
         colors = ['orange', 'm', 'brown', 'green', 'cyan']
         plt.plot_objects(xs, ys, redshift, length_of_final, labels, styles,
-                         colors, xlabel=r'$\log(M_{*}/M_{\odot})$',
+                         colors,
+                         redshift_tol_lo=redshift_tol_lo,
+                         redshift_tol_hi=redshift_tol_hi,
+                         xlabel=r'$\log(M_{*}/M_{\odot})$',
                          ylabel=r'$z$', title=cluster,
                          xmin=2, xmax=14, ymin=0, ymax=0.9)
     
     return final_objs
 
 def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
-                              U_filtnum, V_filtnum, J_filtnum,
+                              U_filtnum, V_filtnum, J_filtnum, z_spec=True,
+                              redshift_tol_lo=0.05, redshift_tol_hi=0.05,
                               plot_all=False, plot_uvj=False,
                               write_final_objs=False, write_regions=False) :
     '''
@@ -336,6 +383,12 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
         DESCRIPTION.
     J_filtnum : TYPE
         DESCRIPTION.
+    z_spec : bool, optional
+        Flag to use spectroscopic redshifts. The default is True.
+    redshift_tol_lo : float, optional
+        The low redshift tolerance to use. The default is 0.05.
+    redshift_tol_hi : float, optional
+        The high redshift tolerance to use. The default is 0.05.
     plot_all : TYPE, optional
         DESCRIPTION. The default is False.
     plot_uvj : TYPE, optional
@@ -351,7 +404,10 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     
     '''
     
-    final_objs = determine_final_objects(cluster, key, redshift, plot=plot_all)
+    final_objs = determine_final_objects(cluster, key, redshift,
+                                         redshift_tol_lo=redshift_tol_lo,
+                                         redshift_tol_hi=redshift_tol_hi,
+                                         z_spec=z_spec, plot=plot_all)
     UVJ = combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum)
     final = join(final_objs, UVJ, keys='id')
     

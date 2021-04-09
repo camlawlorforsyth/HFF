@@ -283,7 +283,8 @@ def hst_transmission_curves(table, plot=True) :
     return
 
 def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
-                 colors, xlabel=None, ylabel=None, title=None,
+                 colors, redshift_tol_lo=0.05, redshift_tol_hi=0.05,
+                 xlabel=None, ylabel=None, title=None,
                  xmin=None, xmax=None, ymin=None, ymax=None) :
     '''
     Plot all the objects included in the catalog. This includes final objects
@@ -306,6 +307,10 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
         Marker types to use when plotting.
     colors : list
         Colors to use when plotting.
+    redshift_tol_lo : float, optional
+        The low redshift tolerance to use. The default is 0.05.
+    redshift_tol_hi : float, optional
+        The high redshift tolerance to use. The default is 0.05.
     xlabel : string, optional
         X-axis label. The default is None.
     ylabel : string, optional
@@ -347,9 +352,10 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
                    label = new_label, zorder=i+3)
     
     ax.axhline(redshift, color='k', ls='--', label=r'$z$={}'.format(redshift))
-    ax.axhline(redshift-0.05, color='b', ls='--', zorder=0,
-               label=r'$z \pm 0.05$')
-    ax.axhline(redshift+0.05, color='b', ls='--', zorder=0)
+    ax.axhline(redshift - redshift_tol_lo, color='b', ls='--', zorder=0,
+               label=r'$z - {}$'.format(redshift_tol_lo))
+    ax.axhline(redshift + redshift_tol_hi, color='b', ls='--', zorder=0,
+               label=r'$z + {}$'.format(redshift_tol_hi))
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
