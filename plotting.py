@@ -353,9 +353,9 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     
     ax.axhline(redshift, color='k', ls='--', label=r'$z$={}'.format(redshift))
     ax.axhline(redshift - redshift_tol_lo, color='b', ls='--', zorder=0,
-               label=r'$z - {}$'.format(redshift_tol_lo))
+               label=r'$z - {}$'.format(np.round(redshift_tol_lo, 3)))
     ax.axhline(redshift + redshift_tol_hi, color='b', ls='--', zorder=0,
-               label=r'$z + {}$'.format(redshift_tol_hi))
+               label=r'$z + {}$'.format(np.round(redshift_tol_hi, 3)))
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -369,7 +369,7 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
-              fontsize=15) #, bbox_to_anchor=(1.01, 1))
+              fontsize=15) # bbox_to_anchor=(1.01, 1)
     
     plt.tight_layout()
     plt.show()

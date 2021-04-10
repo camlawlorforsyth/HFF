@@ -33,7 +33,11 @@ def determine_rms(segPath, files) :
         
         mask = np.where(segMap == 0)
         masked_sci = sci[mask]
+        
+        # mask out large values that will influence the rms
         masked_sci[masked_sci > 10] = np.nan
+        masked_sci[masked_sci < -10] = np.nan
+        
         rms = np.sqrt(np.nanmean(np.square(masked_sci)))
         rmses.append(rms)
     
