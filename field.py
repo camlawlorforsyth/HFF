@@ -44,7 +44,7 @@ def determine_rms(segPath, files) :
     return rmses
 
 def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
-                 selection) :
+                 selection, z_spec=True) :
     '''
     Save the cutouts for all science objects in a given filter, as well as
     noise cutouts and segmentation map cutouts. Then move to the next filter,
@@ -60,7 +60,11 @@ def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
     extent = 5 # maximum radius of image will be 5 times R_e
     
     sci_objs = Table.read(final_objs_path)
-    xx, yy, redshift = sci_objs['x'], sci_objs['y'], sci_objs['z_spec']
+    xx, yy = sci_objs['x'], sci_objs['y']
+    if z_spec :
+        redshift = sci_objs['z_spec']
+    else : 
+        redshift = sci_objs['z']
     ID, r_e = sci_objs['id'], sci_objs['flux_radius']*u.pixel
     sma, smb = sci_objs['a_image'], sci_objs['b_image']
     pa, object_type = sci_objs['theta_J2000'], sci_objs['UVJ']

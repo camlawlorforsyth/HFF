@@ -508,7 +508,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     final_objs_path = '{}/{}_final_objects.fits'.format(cluster, cluster)
     selection = 'Q' # only consider quiescent galaxies
     field.save_cutouts(cluster, final_objs_path, filters, rms, paths, segPath,
-                       selection)
+                       selection, z_spec=force_spec)
     if verbose :
         print('Saved all science, noise, and segmentation map cutouts.')
     

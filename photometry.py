@@ -59,58 +59,59 @@ def determine_fluxes(cluster, filters) :
         
         numBins = np.nanmax(bins_image) + 1 # accounts for python 0-index
         
-        photometry = Table()
-        photometry['bin'] = range(int(numBins))
-        photometry['sma'], photometry['smb'] = sma, smb
-        photometry['flux'], photometry['err'] = flux, err
-        photometry['SN'], photometry['nPixels'] = flux/err, nPixels
-        photometry['width'], photometry['PA'] = widths, PAs
-        
-        for filt in filters :
-            sci_file = '{}/{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
-                                                    filt)
-            noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
-                                                            IDs[i], filt)
-            segmap_file = '{}/{}_ID_{}_segmap.fits'.format(cutoutDir, cluster,
-                                                           IDs[i])
+        if not np.isnan(numBins) :
+            photometry = Table()
+            photometry['bin'] = range(int(numBins))
+            photometry['sma'], photometry['smb'] = sma, smb
+            photometry['flux'], photometry['err'] = flux, err
+            photometry['SN'], photometry['nPixels'] = flux/err, nPixels
+            photometry['width'], photometry['PA'] = widths, PAs
             
-            (sci, dim, photfnu, r_e,
-             redshift, sma, smb, pa) = open_cutout(sci_file)
-            noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
-            segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
-            
-            # make a copy of the science image based on the segmentation map
-            ID = int(IDs[i])
-            new_sci = sci.copy()
-            new_sci[(segMap > 0) & (segMap != ID)] = 0 # don't mask out the sky
-            
-            # and for the noise image as well
-            new_noise = noise.copy()
-            new_noise[(segMap > 0) & (segMap != ID)] = 0
-            
-            lumDist = cosmo.luminosity_distance(redshift)
-            
-            # save relevant information for running prospector into the table
-            length = len(range(int(numBins)))
-            photometry['R_e'] = [r_e]*length*u.pix
-            photometry['z'] = [redshift]*length
-            photometry['lumDist'] = [lumDist.value]*length*u.Mpc
-            
-            fluxes, uncerts = [], []
-            for val in range(int(numBins)) :
-                mask = np.where(bins_image == val)
+            for filt in filters :
+                sci_file = '{}/{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
+                                                        filt)
+                noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
+                                                                IDs[i], filt)
+                segmap_file = '{}/{}_ID_{}_segmap.fits'.format(cutoutDir, cluster,
+                                                               IDs[i])
                 
-                masked_sci = new_sci[mask]
-                flux = photfnu*np.nansum(masked_sci)
-                fluxes.append(flux)
+                (sci, dim, photfnu, r_e,
+                 redshift, sma, smb, pa) = open_cutout(sci_file)
+                noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
+                segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
                 
-                masked_noise = new_noise[mask]
-                uncert = photfnu*np.sqrt(np.nansum(np.square(masked_noise)))
-                uncerts.append(uncert)
+                # make a copy of the science image based on the segmentation map
+                ID = int(IDs[i])
+                new_sci = sci.copy()
+                new_sci[(segMap > 0) & (segMap != ID)] = 0 # don't mask out the sky
+                
+                # and for the noise image as well
+                new_noise = noise.copy()
+                new_noise[(segMap > 0) & (segMap != ID)] = 0
+                
+                lumDist = cosmo.luminosity_distance(redshift)
+                
+                # save relevant information for running prospector into the table
+                length = len(range(int(numBins)))
+                photometry['R_e'] = [r_e]*length*u.pix
+                photometry['z'] = [redshift]*length
+                photometry['lumDist'] = [lumDist.value]*length*u.Mpc
+                
+                fluxes, uncerts = [], []
+                for val in range(int(numBins)) :
+                    mask = np.where(bins_image == val)
+                    
+                    masked_sci = new_sci[mask]
+                    flux = photfnu*np.nansum(masked_sci)
+                    fluxes.append(flux)
+                    
+                    masked_noise = new_noise[mask]
+                    uncert = photfnu*np.sqrt(np.nansum(np.square(masked_noise)))
+                    uncerts.append(uncert)
+                
+                photometry[filt + '_flux'] = fluxes*u.Jy
+                photometry[filt + '_err'] = uncerts*u.Jy
             
-            photometry[filt + '_flux'] = fluxes*u.Jy
-            photometry[filt + '_err'] = uncerts*u.Jy
-        
-        photometry.write(outfile)
+            photometry.write(outfile)
     
     return
