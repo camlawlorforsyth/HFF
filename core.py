@@ -203,6 +203,32 @@ def combine_colors(first_path, second_path, FUV_filtnum=218, U_filtnum=153,
     
     return table
 
+def create_blank_models() :
+    '''
+    Create blank "models" for the missing model images: F225W for A1063,
+    F225W and F275W for MACS J1149.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    
+    a1063_dim = (5190, 4860)
+    m1149_dim = (5400, 5400)
+    dims = [a1063_dim, m1149_dim, m1149_dim]
+    
+    outfiles = ['abell1063_f225w_bcgs_model.fits.gz',
+                'macs1149_f225w_bcgs_model.fits.gz',
+                'macs1149_f275w_bcgs_model.fits.gz']
+    
+    for i in range(len(dims)) :
+        data = np.zeros(dims[i])
+        hdu = fits.PrimaryHDU(data)
+        hdu.writeto('models/' + outfiles[i])
+    
+    return
+
 def determine_final_flags(table) :
     '''
     Determine the final flag for each object in `table`.
@@ -381,21 +407,23 @@ def determine_final_objects(cluster, redshift, key='id',
     else :
         no_flags_objs_z = no_flags_objs['z']
     
+    # create the scatter plot
     if plot :
-        # create the scatter plot
-        xs = [final_objs_lmass, no_flags_objs_lmass, small_mass_objs_lmass]
-        ys = [final_objs_z, no_flags_objs_z, small_mass_objs_z]
-        labels = ['final ({})'.format(length_of_final),
-                  r'$z~\notin~z_c \pm \delta z$',
-                  r'$M_* < 10^{8}~M_{\odot}$']
-        styles = ['o', 's', 's']
-        colors = ['k', 'cyan', 'orange']
-        plt.plot_objects(xs, ys, redshift, labels, styles, colors,
+        xs = [no_flags_objs_lmass, small_mass_objs_lmass, final_objs_lmass]
+        ys = [no_flags_objs_z, small_mass_objs_z, final_objs_z]
+        labels = [r'$z~\notin~z_c \pm \delta z$',
+                  r'$M_* < 10^{8}~M_{\odot}$',
+                  'final ({})'.format(length_of_final)]
+        styles = ['x', '+', 'o']
+        colors = ['k', 'k', 'k']
+        sizes = [75, 80, 40]
+        alphas = [1, 1, 0.4]
+        plt.plot_objects(xs, ys, redshift, labels, styles, colors,sizes,alphas,
                          redshift_tol_lo=redshift_tol_lo,
                          redshift_tol_hi=redshift_tol_hi,
                          xlabel=r'$\log(M_{*}/M_{\odot})$',
                          ylabel=r'$z$', title=cluster,
-                         xmin=2, xmax=14, ymin=0, ymax=0.9)
+                         xmin=2, xmax=14, ymin=0.2, ymax=0.8)
     
     return final_objs
 

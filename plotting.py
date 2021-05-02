@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib import cm
 from matplotlib.colors import LogNorm
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 currentFig = 1
 
@@ -368,8 +369,8 @@ def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
     
     return
 
-def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers,
-                 colors, redshift_tol_lo=0.05, redshift_tol_hi=0.05,
+def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers, colors,
+                 sizes, alphas, redshift_tol_lo=0.05, redshift_tol_hi=0.05,
                  xlabel=None, ylabel=None, title=None,
                  xmin=None, xmax=None, ymin=None, ymax=None) :
     '''
@@ -417,26 +418,24 @@ def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers,
     '''
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(7.5, 5.5))
+    fig = plt.figure(currentFig, figsize=(11, 9))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
     
-    for i in range(len(array_of_xs)) :
-        if colors[i] == 'cyan':
-            edgecolor = 'k'
-            size = 100
-        else :
-            edgecolor = colors[i]
-            size = 60
-        ax.scatter(array_of_xs[i], array_of_ys[i], s=size, alpha=0.7,
-                   c=colors[i], marker=markers[i], edgecolors=edgecolor,
-                   label=labels[i], zorder=i+3)
+    # global currentFig
+    # fig, ax = plt.subplots()
+    # currentFig += 1
+    # plt.clf()
     
-    ax.axhline(redshift, color='k', ls='--', label=r'$z$={}'.format(redshift))
-    ax.axhline(redshift - redshift_tol_lo, color='b', ls='--', zorder=0,
+    for i in range(len(array_of_xs)) :
+        ax.scatter(array_of_xs[i], array_of_ys[i], s=sizes[i], alpha=alphas[i],
+                   c=colors[i], marker=markers[i], label=labels[i], zorder=i+3)
+    
+    ax.axhline(redshift, color='k', ls=':', label=r'$z$={}'.format(redshift))
+    ax.axhline(redshift - redshift_tol_lo, color='b', ls=':', zorder=0,
                label=r'$z \pm \delta z$')
-    ax.axhline(redshift + redshift_tol_hi, color='b', ls='--', zorder=0)
+    ax.axhline(redshift + redshift_tol_hi, color='b', ls=':', zorder=0)
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -449,8 +448,22 @@ def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers,
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+    ax.legend(loc='upper right', facecolor='whitesmoke', framealpha=1,
               fontsize=15) # bbox_to_anchor=(1.01, 1)
+    
+    # inset axes
+    axins = inset_axes(ax, width='40%', height='30%', loc='upper left',
+                       borderpad=4)
+    axins.axhline(redshift, color='k', ls=':')
+    axins.axhline(redshift - redshift_tol_lo, color='b', ls=':', zorder=0)
+    axins.axhline(redshift + redshift_tol_hi, color='b', ls=':', zorder=0)
+    for i in range(len(array_of_xs)) :
+        axins.scatter(array_of_xs[i], array_of_ys[i], s=sizes[i],
+                      alpha=alphas[i], c=colors[i], marker=markers[i],
+                      zorder=i+3)
+        axins.set_xlim(7, 12.5)
+        axins.set_ylim(redshift-2*redshift_tol_lo, redshift+2*redshift_tol_hi)
+    
     
     plt.tight_layout()
     plt.show()
