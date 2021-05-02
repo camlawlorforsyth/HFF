@@ -282,7 +282,93 @@ def hst_transmission_curves(table, plot=True) :
     
     return
 
-def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
+def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
+                          alphas, contour_xs, contour_ys, contour_zs, version,
+                          xlabel=None, ylabel=None, plot_divider=True,
+                          xmin=None, xmax=None, ymin=None, ymax=None, loc=0) :
+    '''
+    Plot a standard color-color diagram. This includes the UVJ diagram, as well
+    as the FUVVJ diagram.
+    
+    Parameters
+    ----------
+    xs : list
+        DESCRIPTION.
+    ys : list
+        DESCRIPTION.
+    xlabel : TYPE, optional
+        DESCRIPTION. The default is None.
+    ylabel : TYPE, optional
+        DESCRIPTION. The default is None.
+    plot_divider : bool, optional
+        Flag to plot the quiescent region dividing line. The default is True.
+    xmin : TYPE, optional
+        DESCRIPTION. The default is None.
+    xmax : TYPE, optional
+        DESCRIPTION. The default is None.
+    ymin : TYPE, optional
+        DESCRIPTION. The default is None.
+    ymax : TYPE, optional
+        DESCRIPTION. The default is None.
+    loc : float, optional
+        Location of the legend. The default is 0.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(9.5, 7))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    # plot the diagonal region that contains quiescent galaxies
+    if version == 'FUVVJ' :
+        slope, intercept, horiz, vert = 3.24, 0.32, 3.45, 1.56
+    else : # UVJ is the default
+        slope, intercept, horiz, vert = 0.88, 0.69, 1.3, 1.5
+    
+    first_knee, second_knee = (horiz - intercept)/slope, vert
+    divide_x = np.linspace(first_knee, second_knee, 1000)
+    divide_y = slope*divide_x + intercept
+    if plot_divider :
+        ax.hlines(horiz, xmin, first_knee, ls='-', color='k', zorder=5)
+        ax.plot(divide_x, divide_y, 'k-', zorder=5)
+        ax.vlines(vert, slope*second_knee + intercept, ymax,
+                  ls='-', color='k', zorder=5)
+    
+    for i in range(len(xs)) :
+        ax.scatter(xs[i], ys[i], s=sizes[i], color=colors[i],
+                   marker=markers[i], alpha=alphas[i],
+                   label='{} ({})'.format(labels[i], lengths[i]))
+    
+    for i in range(len(contour_xs)) :
+        ax.contour(contour_xs[i], contour_ys[i], contour_zs[i], colors='k',
+                   alpha=0.1, zorder=2)
+    
+    # these are two star-forming (according to the FUVVJ) bCGs from A370 and M416
+    # ax.scatter([-20.313091957851302 - -21.698459182796444,
+    #             -22.290556427098757 - -23.441648553116536],
+    #            [-16.005818274869203 - -20.313091957851302,
+    #             -19.444035537051526 - -22.290556427098757], s=150, color='k')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(loc=loc, facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers,
                  colors, redshift_tol_lo=0.05, redshift_tol_hi=0.05,
                  xlabel=None, ylabel=None, title=None,
                  xmin=None, xmax=None, ymin=None, ymax=None) :
@@ -299,8 +385,6 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
         Arrays of object redshifts.
     redshift : float
         The redshift of the cluster.
-    length : float
-        The number of final objects to be analyzed.
     labels : list
         Labels for each object type.
     markers : list
@@ -341,21 +425,18 @@ def plot_objects(array_of_xs, array_of_ys, redshift, length, labels, markers,
     for i in range(len(array_of_xs)) :
         if colors[i] == 'cyan':
             edgecolor = 'k'
-            new_label = '{} ({})'.format(labels[i], length)
             size = 100
         else :
-            edgecolor = None
-            new_label = labels[i]
+            edgecolor = colors[i]
             size = 60
-        ax.scatter(array_of_xs[i], array_of_ys[i], s=size,
+        ax.scatter(array_of_xs[i], array_of_ys[i], s=size, alpha=0.7,
                    c=colors[i], marker=markers[i], edgecolors=edgecolor,
-                   label = new_label, zorder=i+3)
+                   label=labels[i], zorder=i+3)
     
     ax.axhline(redshift, color='k', ls='--', label=r'$z$={}'.format(redshift))
     ax.axhline(redshift - redshift_tol_lo, color='b', ls='--', zorder=0,
-               label=r'$z - {}$'.format(np.round(redshift_tol_lo, 3)))
-    ax.axhline(redshift + redshift_tol_hi, color='b', ls='--', zorder=0,
-               label=r'$z + {}$'.format(np.round(redshift_tol_hi, 3)))
+               label=r'$z \pm \delta z$')
+    ax.axhline(redshift + redshift_tol_hi, color='b', ls='--', zorder=0)
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -505,18 +586,18 @@ def plot_UVJ(xs, ys, xlabel=None, ylabel=None, title=None,
     plt.clf()
     ax = fig.add_subplot(111)
     
-    slope, intercept = 0.88, 0.59
-    first_knee, second_knee = (1.3-0.59)/0.88, 1.5
+    slope, intercept, horiz, vert = 0.88, 0.69, 1.3, 1.5
+    first_knee, second_knee = (horiz - intercept)/slope, vert
     
-    ax.hlines(1.3, xmin, first_knee, ls='-', color='k', zorder=5)
+    ax.hlines(horiz, xmin, first_knee, ls='-', color='k', zorder=5)
     divide_x = np.linspace(first_knee, second_knee, 1000)
     divide_y = slope*divide_x + intercept
     ax.plot(divide_x, divide_y, 'k-')
-    ax.vlines(second_knee, slope*second_knee + intercept, ymax,
+    ax.vlines(vert, slope*second_knee + intercept, ymax,
               ls='-', color='k', zorder=5)
     
     # the corner region where the quiescent galaxies reside
-    corner = ( ((xs <= first_knee) & (ys >= 1.3)) |
+    corner = ( ((xs <= first_knee) & (ys >= horiz)) |
                ( ((xs >= first_knee) & (xs <= second_knee))
                  & (ys >= slope*xs + intercept)) )
     

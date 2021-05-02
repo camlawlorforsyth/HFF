@@ -478,15 +478,14 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
         print('Created cluster directory.')
     
     # determine the final science objects, based on flags in the catalogs
-    U_filtnum, V_filtnum, J_filtnum = 153, 155, 161
-    core.determine_finalObjs_w_UVJ(cluster, 'id', cluster_redshift,
-                                   first_path, second_path,
-                                   U_filtnum, V_filtnum, J_filtnum,
-                                   redshift_tol_lo=delta_z_lo,
-                                   redshift_tol_hi=delta_z_hi,
-                                   z_spec=force_spec,
-                                   plot_all=True, plot_uvj=True,
-                                   write_final_objs=True, write_regions=True)
+    core.determine_finalObjs_w_color(cluster, cluster_redshift,
+                                     first_path, second_path,
+                                     redshift_tol_lo=delta_z_lo,
+                                     redshift_tol_hi=delta_z_hi,
+                                     z_spec=force_spec,
+                                     plot_all=True, plot_uvj=True,
+                                     write_final_objs=True,
+                                     write_regions=True, selection='FUVVJ')
     if verbose :
         print('Determined final objects and saved to fits file.')
     
@@ -531,7 +530,22 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     if verbose :
         print('Plotted annuli histogram.')
     
+    # END
+    
     # then on linux, move to the `hff/` directory, and run
     # python prospector.py
+    
+    return
+
+def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False) :
+    
+    if total_FUVVJ :
+        checks.plot_all_FUVVJ()
+    
+    if total_UVJ :
+        checks.plot_all_UVJ()
+    
+    if parallel_objects :
+        checks.plot_all_parallel_objects_all()
     
     return

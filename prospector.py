@@ -46,4 +46,7 @@ for cluster in clusters :
                     '--verbose', str(int(0)), # False
                     '--dynesty',
                     '--outfile', outfile]
-            subprocess.run(args) # run the subprocess
+            try :
+                subprocess.run(args) # run the subprocess
+            except :
+                pass
