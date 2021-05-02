@@ -136,8 +136,8 @@ def build_filter_table(save_par=False, display=False, write=False) :
     
     return master_table
 
-def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
-                plotuvj_hist=False) :
+def combine_colors(first_path, second_path, FUV_filtnum=218, U_filtnum=153,
+                   V_filtnum=155, J_filtnum=161, key='id', plot_hist=False) :
     '''
     
     
@@ -147,12 +147,16 @@ def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
         DESCRIPTION.
     second_path : string
         DESCRIPTION.
-    U_filtnum : int
-        DESCRIPTION.
-    V_filtnum : int
-        DESCRIPTION.
-    J_filtnum : int
-        DESCRIPTION.
+    FUV_filtnum : int, optional
+        Number describing FUV filter color indices file. The default is 218.
+    U_filtnum : int, optional
+        Number describing U filter color indices file. The default is 153.
+    V_filtnum : int, optional
+        Number describing V filter color indices file. The default is 155.
+    J_filtnum : int, optional
+        Number describing J filter color indices file. The default is 161.
+    key : string, optional
+        The key to base the table join operation on. The default is 'id'.
     plotuvj : bool, optional
         Boolean to plot the values on a scatter plot. The default is False.
     
@@ -164,27 +168,34 @@ def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
     '''
     
     direc = 'catalogs/{}/eazy/{}'.format(first_path, second_path)
+    FUV_file = '{}/{}.{}.rf'.format(direc, second_path, str(FUV_filtnum))
     U_file = '{}/{}.{}.rf'.format(direc, second_path, str(U_filtnum))
     V_file = '{}/{}.{}.rf'.format(direc, second_path, str(V_filtnum))
     J_file = '{}/{}.{}.rf'.format(direc, second_path, str(J_filtnum))
     
+    FUV_tab = Table.read(FUV_file, format='ascii')
     U_tab = Table.read(U_file, format='ascii')
     V_tab = Table.read(V_file, format='ascii')
     J_tab = Table.read(J_file, format='ascii')
     
-    UV_join = join(U_tab, V_tab, keys='id')
-    UVJ_join = join(UV_join, J_tab, keys='id')
+    FUVU_join = join(FUV_tab, U_tab, keys=key, table_names=['FUV', 'U'],
+                     uniq_col_name='{table_name}_{col_name}')
+    FUVUV_join = join(FUVU_join, V_tab, keys=key, table_names=['U', 'V'],
+                      uniq_col_name='{table_name}_{col_name}')
+    FUVUVJ_join = join(FUVUV_join, J_tab, keys=key, table_names=['V', 'J'],
+                       uniq_col_name='{table_name}_{col_name}')
     
-    DM = UVJ_join['DM']
+    DM = FUVUVJ_join['FUV_DM']
     
-    M_AB_U = -2.5*np.log10(UVJ_join['L' + str(U_filtnum)]) + 25 - DM
-    M_AB_V = -2.5*np.log10(UVJ_join['L' + str(V_filtnum)]) + 25 - DM
-    M_AB_J = -2.5*np.log10(UVJ_join['L' + str(J_filtnum)]) + 25 - DM
+    M_AB_FUV = -2.5*np.log10(FUVUVJ_join['L' + str(FUV_filtnum)]) + 25 - DM
+    M_AB_U = -2.5*np.log10(FUVUVJ_join['L' + str(U_filtnum)]) + 25 - DM
+    M_AB_V = -2.5*np.log10(FUVUVJ_join['L' + str(V_filtnum)]) + 25 - DM
+    M_AB_J = -2.5*np.log10(FUVUVJ_join['L' + str(J_filtnum)]) + 25 - DM
     
-    table = Table([UVJ_join['id'], M_AB_U, M_AB_V, M_AB_J],
-                  names=('id', 'M_AB_U', 'M_AB_V', 'M_AB_J') )
+    table = Table([FUVUVJ_join['id'], M_AB_FUV, M_AB_U, M_AB_V, M_AB_J],
+                  names=('id', 'M_AB_FUV', 'M_AB_U', 'M_AB_V', 'M_AB_J') )
     
-    if plotuvj_hist :
+    if plot_hist :
         plt.plot_UVJ_hist(table['M_AB_V'] - table['M_AB_J'],
                           table['M_AB_U'] - table['M_AB_V'],
                           xlabel=r'$V - J$', ylabel=r'$U - V$',
@@ -192,7 +203,54 @@ def combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum,
     
     return table
 
-def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
+def determine_final_flags(table) :
+    '''
+    Determine the final flag for each object in `table`.
+    
+    Parameters
+    ----------
+    table : astropy.table.Table
+        The table to determine the final flags for.
+    
+    Returns
+    -------
+    final_flag : list
+        The final flags for the objects in the table.
+    
+    '''
+    
+    # determine the band flags that are in the catalog
+    band_flags = [string for string in table.colnames if 'flag_F' in string]
+    
+    # use only those columns to create a new subtable
+    flag_table = Table([table[band_flag] for band_flag in band_flags],
+                       names=tuple(band_flags))
+    
+    # determine the appropriate final flag for each galaxy
+    final_flag = []
+    for row in flag_table.iterrows() :
+        '''
+        row = np.array(row)
+        # mask out any zeros
+        non_zero = row[row != 0]
+        mode, count = stats.mode(non_zero)
+        if len(mode) == 0 :
+            final_flag.append(0)
+        else :
+            # print(mode[0])
+            final_flag.append(mode[0])
+        '''
+        final_flag.append(0)
+    
+    # print(final_flag)
+    # table['final_flag'] = final_flag
+    # set_of_sums = set(combined['final_flag'])
+    # print(np.sort(list(set_of_sums)))
+    
+    return final_flag
+
+def determine_final_objects(cluster, redshift, key='id',
+                            z_spec=True, plot=False,
                             redshift_tol_lo=0.05, redshift_tol_hi=0.05) :
     '''
     Determine the final objects to use for analysis, based on various quality
@@ -203,10 +261,10 @@ def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
     ----------
     cluster : string
         String describing the cluster which informs the path to relevant data.
-    key : string
-        String describing the key which is used to join the data.
     redshift : float
         The redshift of the cluster.
+    key : string, optional
+        The key to base the table join operation on. The default is 'id'.
     z_spec : bool, optional
         Flag to use spectroscopic redshifts. The default is True.
     plot : bool, optional
@@ -238,29 +296,37 @@ def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
         mask = combined['z'] > 0
         combined = combined[mask]
     
-    # determine the band flags that are in the catalog
-    band_flags = [string for string in combined.colnames if 'flag_F' in string]
+    # remove any point sources and "uncertain" sources, as per Shipley+ (2018)
+    mask = combined['star_flag'] == 0
+    combined = combined[mask]
     
-    # use only those colmns to create a new subtable
-    flag_table = Table([combined[band_flag] for band_flag in band_flags],
-                       names=tuple(band_flags))
+    # remove not "OK" sources, as per Shipley+ (2018)
+    mask = combined['use_phot'] == 1
+    combined = combined[mask]
     
-    # determine the appropriate final flag for each galaxy
-    final_flag = []
-    for row in flag_table.iterrows() :
-        row = np.array(row)
-        # mask out any zeros
-        non_zero = row[row != 0]
-        mode, count = stats.mode(non_zero)
-        if len(mode) == 0 :
-            final_flag.append(0)
-        else :
-            # print(mode[0])
-            final_flag.append(mode[0])
-    # print(final_flag)
-    combined['final_flag'] = final_flag
-    # set_of_sums = set(combined['final_flag'])
-    # print(np.sort(list(set_of_sums)))
+    # remove sources that are not in the footprint of the F160W image
+    mask = (combined['flag_F160W'] != -1) & (combined['flag_F160W'] != -99)
+    combined = combined[mask]
+    
+    # mask the modelled-and-subtracted bCGs
+    # mask = combined['bandtotal'] != 'bcg'
+    # combined = combined[mask]
+    
+    # mask specific galaxies from certain clusters
+    if cluster == 'm717' :
+        mask = ((combined['id'] != 777) & (combined['id'] != 5551) &
+                (combined['id'] != 5890) & (combined['id'] != 5956) &
+                (combined['id'] != 6308) & (combined['id'] != 6335))
+        # the above IDs all have no synethsized FUV, U, V, J color indices
+    if cluster == 'a1063par' :
+        mask = (combined['id'] != 789) & (combined['id'] != 4690)
+        # ID 789 is too faint and resulted in no annuli
+        # ID 4690 is an errant detection on the edge of the field
+        combined = combined[mask]
+    
+    # determine the final flags for all galaxies
+    final_flags = determine_final_flags(combined)
+    combined['final_flag'] = final_flags
     
     # plot the final objects that will be used
     if z_spec :
@@ -315,40 +381,16 @@ def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
     else :
         no_flags_objs_z = no_flags_objs['z']
     
-    # plot objects which are likely BCGs
-    likely_BCGs_mask = combined['final_flag']==4
-    likely_BCGs = combined[likely_BCGs_mask]
-    likely_BCGs_lmass = likely_BCGs['lmass']
-    if z_spec :
-        likely_BCGs_z = likely_BCGs['z_spec']
-    else :
-        likely_BCGs_z = likely_BCGs['z_spec']
-    
-    # plot all other types of objects: final_flag in [-99, -1, 2, 3]
-    others_mask = ((combined['final_flag']==-99) |
-                   (combined['final_flag']==-1) |
-                   (combined['final_flag']==1) |
-                   (combined['final_flag']==2) |
-                   (combined['final_flag']==3))
-    others = combined[others_mask]
-    others_lmass = others['lmass']
-    if z_spec :
-        others_z = others['z_spec']
-    else :
-        others_z = others['z']
-    
     if plot :
         # create the scatter plot
-        xs = [others_lmass, likely_BCGs_lmass, no_flags_objs_lmass,
-              small_mass_objs_lmass, final_objs_lmass]
-        ys = [others_z, likely_BCGs_z, no_flags_objs_z,
-              small_mass_objs_z, final_objs_z]
-        labels = ['flags', 'BCGs', r'$z~\notin~z_c \pm \delta z$',
-                  r'$M_* < 10^{8}~M_{\odot}$', 'final']
-        styles = ['v', '^', 's', 's', 'o']
-        colors = ['orange', 'm', 'brown', 'green', 'cyan']
-        plt.plot_objects(xs, ys, redshift, length_of_final, labels, styles,
-                         colors,
+        xs = [final_objs_lmass, no_flags_objs_lmass, small_mass_objs_lmass]
+        ys = [final_objs_z, no_flags_objs_z, small_mass_objs_z]
+        labels = ['final ({})'.format(length_of_final),
+                  r'$z~\notin~z_c \pm \delta z$',
+                  r'$M_* < 10^{8}~M_{\odot}$']
+        styles = ['o', 's', 's']
+        colors = ['k', 'cyan', 'orange']
+        plt.plot_objects(xs, ys, redshift, labels, styles, colors,
                          redshift_tol_lo=redshift_tol_lo,
                          redshift_tol_hi=redshift_tol_hi,
                          xlabel=r'$\log(M_{*}/M_{\odot})$',
@@ -357,11 +399,13 @@ def determine_final_objects(cluster, key, redshift, z_spec=True, plot=False,
     
     return final_objs
 
-def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
-                              U_filtnum, V_filtnum, J_filtnum, z_spec=True,
-                              redshift_tol_lo=0.05, redshift_tol_hi=0.05,
-                              plot_all=False, plot_uvj=False,
-                              write_final_objs=False, write_regions=False) :
+def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
+                                key='id', FUV_filtnum=218, U_filtnum=153,
+                                V_filtnum=155, J_filtnum=161,
+                                redshift_tol_lo=0.05, redshift_tol_hi=0.05,
+                                z_spec=True, plot_all=False, plot_uvj=False,
+                                write_final_objs=False, write_regions=False,
+                                selection='FUVVJ') :
     '''
     
     
@@ -369,20 +413,22 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     ----------
     cluster : TYPE
         DESCRIPTION.
-    key : TYPE
-        DESCRIPTION.
     redshift : TYPE
         DESCRIPTION.
     first_path : TYPE
         DESCRIPTION.
     second_path : TYPE
         DESCRIPTION.
-    U_filtnum : TYPE
-        DESCRIPTION.
-    V_filtnum : TYPE
-        DESCRIPTION.
-    J_filtnum : TYPE
-        DESCRIPTION.
+    key : string, optional
+        The key to base the table join operation on. The default is 'id'.
+    FUV_filtnum : int, optional
+        Number describing FUV filter color indices file. The default is 218.
+    U_filtnum : int, optional
+        Number describing U filter color indices file. The default is 153.
+    V_filtnum : int, optional
+        Number describing V filter color indices file. The default is 155.
+    J_filtnum : int, optional
+        Number describing J filter color indices file. The default is 161.
     z_spec : bool, optional
         Flag to use spectroscopic redshifts. The default is True.
     redshift_tol_lo : float, optional
@@ -397,6 +443,8 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
         DESCRIPTION. The default is False.
     write_regions : TYPE, optional
         DESCRIPTION. The default is False.
+    selection : string, optional
+        Determines how QGs and SFGs are determined. The default is 'FUVVJ'.
     
     Returns
     -------
@@ -404,24 +452,36 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
     
     '''
     
-    final_objs = determine_final_objects(cluster, key, redshift,
+    final_objs = determine_final_objects(cluster, redshift, key=key,
+                                         z_spec=z_spec, plot=plot_all,
                                          redshift_tol_lo=redshift_tol_lo,
-                                         redshift_tol_hi=redshift_tol_hi,
-                                         z_spec=z_spec, plot=plot_all)
-    UVJ = combine_UVJ(first_path, second_path, U_filtnum, V_filtnum, J_filtnum)
-    final = join(final_objs, UVJ, keys='id')
+                                         redshift_tol_hi=redshift_tol_hi)
+    colors = combine_colors(first_path, second_path, FUV_filtnum, U_filtnum,
+                            V_filtnum, J_filtnum, key=key)
+    final = join(final_objs, colors, keys=key)
     
-    # create a column describing the position on the UVJ diagram
-    xs, ys = final['M_AB_V']-final['M_AB_J'], final['M_AB_U']-final['M_AB_V']
-    slope, intercept = 0.88, 0.59
-    first_knee, second_knee = (1.3-0.59)/0.88, 1.5
-    corner = ( ((xs <= first_knee) & (ys >= 1.3)) |
+    # determine colors and set values for the different color-color diagrams
+    if selection == 'UVJ' : # using values from Muzzin et al. 2013
+        xs = final['M_AB_V'] - final['M_AB_J']
+        ys = final['M_AB_U'] - final['M_AB_V']
+        slope, intercept, horiz, vert = 0.88, 0.69, 1.3, 1.5
+    else : # using values from Leja et al. 2019b
+        xs = final['M_AB_V'] - final['M_AB_J']
+        ys = final['M_AB_FUV'] - final['M_AB_V']
+        slope, intercept, horiz, vert = 3.24, 0.32, 3.45, 1.56
+    
+    first_knee, second_knee = (horiz - intercept)/slope, vert
+    
+    # define the quiescent region
+    corner = ( ((xs <= first_knee) & (ys >= horiz)) |
                ( ((xs >= first_knee) & (xs <= second_knee))
                  & (ys >= slope*xs + intercept)) )
-    UVJ_type = np.empty(len(final), dtype=str)
-    UVJ_type[corner], UVJ_type[~corner] = 'Q', 'S'
-    UVJ_type  = np.char.replace(UVJ_type, 'S', 'SF')
-    final['UVJ'] = UVJ_type
+    
+    # create a column describing the population type
+    pop_type = np.empty(len(final), dtype=str)
+    pop_type[corner], pop_type[~corner] = 'Q', 'S'
+    pop_type  = np.char.replace(pop_type, 'S', 'SF')
+    final['pop'] = pop_type
     
     if plot_uvj :
         plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
@@ -434,20 +494,7 @@ def determine_finalObjs_w_UVJ(cluster, key, redshift, first_path, second_path,
         final.write(final_objs_file)
     
     if write_regions :
-        region_file = '{}/{}_final_objects_R_e.reg'.format(cluster, cluster)
-        first = '# Region file format: DS9 version 4.1\n'
-        second = ('global color=red width=2 select=1 ' +
-                  'edit=1 move=1 delete=1 include=1\n')
-        third = 'fk5\n'
-        with open(region_file, 'a+') as file :
-            file.write(first)
-            file.write(second)
-            file.write(third)
-            for i in range(len(final)) :                
-                string = 'circle({},{},{}") # {}\n'.format(
-                    str(final['ra'][i]), str(final['dec'][i]),
-                    str(final['flux_radius'][i]*0.06), str(final['id'][i]))
-                file.write(string)
+        save_regions(cluster, final)
     
     return
 
@@ -565,5 +612,80 @@ def save_cutout(xx, yy, angular_size, data, outfile, exposure, photfnu, scale,
     
     if show :
         plt.display_image_simple(cutout.data, vmin=vmin, vmax=vmax)
+    
+    return
+
+def save_regions(cluster, table) :
+    '''
+    Save region files containing the locations of the different populations.
+    
+    Parameters
+    ----------
+    cluster : string
+        String describing the cluster which informs the path to relevant data.
+    table : astropy.table.Table
+        Table of final objects which will be used for subsequent analysis.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    q_region_file = '{}/{}_final_QGs_R_e.reg'.format(cluster, cluster)
+    sf_region_file = '{}/{}_final_SFGs_R_e.reg'.format(cluster, cluster)
+    
+    q_bCG_region_file = '{}/{}_final_QbCGs_R_e.reg'.format(cluster, cluster)
+    sf_bCG_region_file = '{}/{}_final_SFbCGs_R_e.reg'.format(cluster, cluster)
+    
+    first = '# Region file format: DS9 version 4.1\n'
+    q_second = ('global color=red width=2 select=1 ' +
+                'edit=1 move=1 delete=1 include=1\n')
+    sf_second = ('global color=blue width=2 select=1 ' +
+                 'edit=1 move=1 delete=1 include=1\n')
+    third = 'fk5\n'
+    
+    with open(q_region_file, 'a+') as file :
+        file.write(first)
+        file.write(q_second)
+        file.write(third)
+        for i in range(len(table)) :
+            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] != 'bcg') :
+                string = 'circle({},{},{}") # {}\n'.format(
+                    str(table['ra'][i]), str(table['dec'][i]),
+                    str(table['flux_radius'][i]*0.06), str(table['id'][i]))
+                file.write(string)
+    
+    with open(sf_region_file, 'a+') as file :
+        file.write(first)
+        file.write(sf_second)
+        file.write(third)
+        for i in range(len(table)) :
+            if (table['pop'][i] == 'SF') & (table['bandtotal'][i] != 'bcg') :
+                string = 'circle({},{},{}") # {}\n'.format(
+                    str(table['ra'][i]), str(table['dec'][i]),
+                    str(table['flux_radius'][i]*0.06), str(table['id'][i]))
+                file.write(string)
+    
+    with open(q_bCG_region_file, 'a+') as file :
+        file.write(first)
+        file.write(q_second)
+        file.write(third)
+        for i in range(len(table)) :
+            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] == 'bcg') :
+                string = 'circle({},{},{}") # {}\n'.format(
+                    str(table['ra'][i]), str(table['dec'][i]),
+                    str(table['flux_radius'][i]*0.06), str(table['id'][i]))
+                file.write(string)
+    
+    with open(sf_bCG_region_file, 'a+') as file :
+        file.write(first)
+        file.write(sf_second)
+        file.write(third)
+        for i in range(len(table)) :
+            if (table['pop'][i] == 'SF') & (table['bandtotal'][i] == 'bcg') :
+                string = 'circle({},{},{}") # {}\n'.format(
+                    str(table['ra'][i]), str(table['dec'][i]),
+                    str(table['flux_radius'][i]*0.06), str(table['id'][i]))
+                file.write(string)
     
     return
