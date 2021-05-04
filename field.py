@@ -71,7 +71,8 @@ def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
     
     dictionary = {}
     for i in range(len(filters)) :
-        dictionary[filters[i]] = {'rms':rms[i], 'file':files[i]}
+        dictionary[filters[i]] = {'rms':rms[i], 'file':files[i],
+                                  'model':models[i]}
     
     os.makedirs('{}/cutouts'.format(cluster), exist_ok=True) # ensure the
         # output directory for the cutouts is available
@@ -90,28 +91,37 @@ def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
             except KeyError :
                 scale = 0.06*u.arcsec/u.pixel
             science = hdu[0].data
+        
+        with fits.open(dictionary.get(filt).get('model')) as hdum :
+            bcg_model = hdum[0].data
+        
+        for i in range(len(sci_objs)) :
+            # add the bCG model into the bCG-subtracted images for the bCGs
+            if ID[i] < 20000 :
+                science = science
+            else :
+                science = science + bcg_model
             
-            for i in range(len(sci_objs)) :
-                if object_type[i] == selection :
-                    # calculate the noise for the filter
-                    rms = dictionary.get(filt).get('rms')
-                    noise = np.sqrt(science/(exposure.value) + rms**2)
-                    
-                    # science file
-                    outfile = '{}/cutouts/{}_ID_{}_{}.fits'.format(
-                        cluster, cluster, str(ID[i]), filt)
-                    save_cutout(xx[i], yy[i], extent*r_e[i],
-                                science, outfile, exposure.value,
-                                photfnu.value, scale.value, rms, r_e.value[i],
-                                redshift[i], sma[i], smb[i], pa[i])
-                    
-                    # noise file
-                    noise_outfile = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
-                        cluster, cluster, str(ID[i]), filt)
-                    save_cutout(xx[i], yy[i], extent*r_e[i],
-                                noise, noise_outfile, exposure.value,
-                                photfnu.value, scale.value, rms, r_e.value[i],
-                                redshift[i], sma[i], smb[i], pa[i])
+            if object_type[i] == selection :
+                # calculate the noise for the filter
+                rms = dictionary.get(filt).get('rms')
+                noise = np.sqrt(science/(exposure.value) + rms**2)
+                
+                # science file
+                outfile = '{}/cutouts/{}_ID_{}_{}.fits'.format(
+                    cluster, cluster, str(ID[i]), filt)
+                save_cutout(xx[i], yy[i], extent*r_e[i],
+                            science, outfile, exposure.value,
+                            photfnu.value, scale.value, rms, r_e.value[i],
+                            redshift[i], sma[i], smb[i], pa[i])
+                
+                # noise file
+                noise_outfile = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
+                    cluster, cluster, str(ID[i]), filt)
+                save_cutout(xx[i], yy[i], extent*r_e[i],
+                            noise, noise_outfile, exposure.value,
+                            photfnu.value, scale.value, rms, r_e.value[i],
+                            redshift[i], sma[i], smb[i], pa[i])
     
     # segmentation map
     for i in range(len(sci_objs)) :
