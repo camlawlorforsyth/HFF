@@ -1,8 +1,13 @@
 
+import astropy.constants as const
+import astropy.units as u
+
+speed_of_light = const.c.to(u.km/u.s)
+
 def a370_params() :
     
-    cluster_redshift = 0.375
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.375, 1170*u.km/u.s # sigma from Dressler+ 1999
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'abell370clu_catalogs', 'abell370clu_v3.9'
     misc = 'misc/abell370clu_misc/'
@@ -49,13 +54,13 @@ def a370_params() :
            0.0070035497120136065,  0.0031736748573591906,
            0.006013218785180418,   0.0041546267]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a1063_params() :
     
-    cluster_redshift = 0.348
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.348, 1840*u.km/u.s # sigma from Lotz+ 2017
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'abell1063clu_catalogs', 'abell1063clu_v3.9'
     misc = 'misc/abell1063clu_misc/'
@@ -112,13 +117,13 @@ def a1063_params() :
            0.004810575815582492,   0.005576161652329551,
            0.0064130011504368615,  0.010719087]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a2744_params() :
     
-    cluster_redshift = 0.308
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.308, 1497*u.km/u.s # sigma from Owers+ 2011
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'abell2744clu_catalogs', 'abell2744clu_v3.9'
     misc = 'misc/abell2744clu_misc/'
@@ -158,13 +163,13 @@ def a2744_params() :
            0.002737900021748479,   0.009309231504260962,
            0.0037151459]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m416_params() :
     
-    cluster_redshift = 0.396
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.396, 955*u.km/u.s #sigma from Jauzac+ 2014
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'macs0416clu_catalogs', 'macs0416clu_v3.9'
     misc = 'misc/macs0416clu_misc/'
@@ -221,13 +226,13 @@ def m416_params() :
            0.005269143193058465,  0.003089861725271567,
            0.00485683000893487,   0.0033343788]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m717_params() :
     
-    cluster_redshift = 0.545
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.545, 1660*u.km/u.s # sigma from Ebeling+ 2007
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'macs0717clu_catalogs', 'macs0717clu_v3.9'
     misc = 'misc/macs0717clu_misc/'
@@ -287,13 +292,13 @@ def m717_params() :
            0.0023549107302774687,  0.0034093925114306325,
            0.0027945212]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m1149_params() :
     
-    cluster_redshift = 0.543
-    delta_z_lo, delta_z_hi = 0.01, 0.01
+    cluster_redshift, sigma = 0.543, 1840*u.km/u.s # sigma from Ebeling+ 2007
+    delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
     force_spec = True
     first_path, second_path = 'macs1149clu_catalogs', 'macs1149clu_v3.9'
     misc = 'misc/macs1149clu_misc/'
@@ -353,14 +358,14 @@ def m1149_params() :
            0.0038990153402697777,  0.003257393011206763,
            0.0040224046]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z, delta_z, force_spec,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a370par_params() :
     
     cluster_redshift = 0.375
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235 # min. z from clusters
+    delta_z_hi = 0.5714108548187694 - cluster_redshift # max. z from clusters
     force_spec = False
     first_path, second_path = 'abell370par_catalogs', 'abell370par_v3.9'
     misc = 'misc/abell370par_misc/'
@@ -400,8 +405,8 @@ def a370par_params() :
 def a1063par_params() :
     
     cluster_redshift = 0.348
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235
+    delta_z_hi = 0.5714108548187694 - cluster_redshift
     force_spec = False
     first_path, second_path = 'abell1063par_catalogs', 'abell1063par_v3.9'
     misc = 'misc/abell1063par_misc/'
@@ -441,8 +446,8 @@ def a1063par_params() :
 def a2744par_params() :
     
     cluster_redshift = 0.308
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235
+    delta_z_hi = 0.5714108548187694 - cluster_redshift
     force_spec = False
     first_path, second_path = 'abell2744par_catalogs', 'abell2744par_v3.9'
     misc = 'misc/abell2744par_misc/'
@@ -482,8 +487,8 @@ def a2744par_params() :
 def m416par_params() :
     
     cluster_redshift = 0.396
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235
+    delta_z_hi = 0.5714108548187694 - cluster_redshift
     force_spec = False
     first_path, second_path = 'macs0416par_catalogs', 'macs0416par_v3.9'
     misc = 'misc/macs0416par_misc/'
@@ -528,8 +533,8 @@ def m416par_params() :
 def m717par_params() :
     
     cluster_redshift = 0.545
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235
+    delta_z_hi = 0.5714108548187694 - cluster_redshift
     force_spec = False
     first_path, second_path = 'macs0717par_catalogs', 'macs0717par_v3.9'
     misc = 'misc/macs0717par_misc/'
@@ -569,8 +574,8 @@ def m717par_params() :
 def m1149par_params() :
     
     cluster_redshift = 0.543
-    delta_z_lo = cluster_redshift - (0.308-0.05)
-    delta_z_hi = (0.545+0.05) - cluster_redshift
+    delta_z_lo = cluster_redshift - 0.2884056845219235
+    delta_z_hi = 0.5714108548187694 - cluster_redshift
     force_spec = False
     first_path, second_path = 'macs1149par_catalogs', 'macs1149par_v3.9'
     misc = 'misc/macs1149par_misc/'

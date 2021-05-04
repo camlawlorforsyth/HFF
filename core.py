@@ -277,7 +277,7 @@ def determine_final_flags(table) :
 
 def determine_final_objects(cluster, redshift, key='id',
                             z_spec=True, plot=False,
-                            redshift_tol_lo=0.05, redshift_tol_hi=0.05) :
+                            redshift_tol_lo=0.01, redshift_tol_hi=0.01) :
     '''
     Determine the final objects to use for analysis, based on various quality
     flags included in the catalog tables. Also combine relevant data including
@@ -296,9 +296,9 @@ def determine_final_objects(cluster, redshift, key='id',
     plot : bool, optional
         Boolean to plot all objects on a scatter plot. The default is False.
     redshift_tol_lo : float, optional
-        The low redshift tolerance to use. The default is 0.05.
+        The low redshift tolerance to use. The default is 0.01.
     redshift_tol_hi : float, optional
-        The high redshift tolerance to use. The default is 0.05.
+        The high redshift tolerance to use. The default is 0.01.
     
     Returns
     -------
@@ -430,7 +430,7 @@ def determine_final_objects(cluster, redshift, key='id',
 def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
                                 key='id', FUV_filtnum=218, U_filtnum=153,
                                 V_filtnum=155, J_filtnum=161,
-                                redshift_tol_lo=0.05, redshift_tol_hi=0.05,
+                                redshift_tol_lo=0.01, redshift_tol_hi=0.01,
                                 z_spec=True, plot_all=False, plot_uvj=False,
                                 write_final_objs=False, write_regions=False,
                                 selection='FUVVJ') :
@@ -460,9 +460,9 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     z_spec : bool, optional
         Flag to use spectroscopic redshifts. The default is True.
     redshift_tol_lo : float, optional
-        The low redshift tolerance to use. The default is 0.05.
+        The low redshift tolerance to use. The default is 0.01.
     redshift_tol_hi : float, optional
-        The high redshift tolerance to use. The default is 0.05.
+        The high redshift tolerance to use. The default is 0.01.
     plot_all : TYPE, optional
         DESCRIPTION. The default is False.
     plot_uvj : TYPE, optional
