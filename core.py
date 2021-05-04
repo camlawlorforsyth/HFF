@@ -659,17 +659,18 @@ def save_regions(cluster, table) :
     None.
     
     '''
+    
     q_region_file = '{}/{}_final_QGs_R_e.reg'.format(cluster, cluster)
     sf_region_file = '{}/{}_final_SFGs_R_e.reg'.format(cluster, cluster)
-    
-    q_bCG_region_file = '{}/{}_final_QbCGs_R_e.reg'.format(cluster, cluster)
-    sf_bCG_region_file = '{}/{}_final_SFbCGs_R_e.reg'.format(cluster, cluster)
+    bCG_region_file = '{}/{}_final_bCGs_R_e.reg'.format(cluster, cluster)
     
     first = '# Region file format: DS9 version 4.1\n'
     q_second = ('global color=red width=2 select=1 ' +
                 'edit=1 move=1 delete=1 include=1\n')
     sf_second = ('global color=blue width=2 select=1 ' +
                  'edit=1 move=1 delete=1 include=1\n')
+    bCG_second = ('global color=green width=2 select=1 ' +
+                  'edit=1 move=1 delete=1 include=1\n')
     third = 'fk5\n'
     
     with open(q_region_file, 'a+') as file :
@@ -694,23 +695,12 @@ def save_regions(cluster, table) :
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
                 file.write(string)
     
-    with open(q_bCG_region_file, 'a+') as file :
+    with open(bCG_region_file, 'a+') as file :
         file.write(first)
-        file.write(q_second)
+        file.write(bCG_second)
         file.write(third)
         for i in range(len(table)) :
             if (table['pop'][i] == 'Q') & (table['bandtotal'][i] == 'bcg') :
-                string = 'circle({},{},{}") # {}\n'.format(
-                    str(table['ra'][i]), str(table['dec'][i]),
-                    str(table['flux_radius'][i]*0.06), str(table['id'][i]))
-                file.write(string)
-    
-    with open(sf_bCG_region_file, 'a+') as file :
-        file.write(first)
-        file.write(sf_second)
-        file.write(third)
-        for i in range(len(table)) :
-            if (table['pop'][i] == 'SF') & (table['bandtotal'][i] == 'bcg') :
                 string = 'circle({},{},{}") # {}\n'.format(
                     str(table['ra'][i]), str(table['dec'][i]),
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
