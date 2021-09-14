@@ -184,9 +184,13 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     # the photometry file saved above
     checks.save_sbps(cluster, population)
     
-    # plots and save the SEDs for every annulus/radial bin, using the
+    # plot and save the SEDs for every annulus/radial bin, using the
     # photometry file saved above
     checks.save_seds(cluster, population)
+    
+    # plot and save histograms of the background pixels to verify that the
+    # background subtraction was completed correctly
+    checks.save_bkgshists(cluster, filters, population)
     
     # END
     

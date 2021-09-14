@@ -416,6 +416,69 @@ def plot_parallel_objects_all() :
     
     return
 
+def save_bkgshists(cluster, filters, population) :
+    
+    num_filts = len(filters)
+    if num_filts == 9 :
+        nrows, ncols = 3, 3
+    elif num_filts == 12 :
+        nrows, ncols = 3, 4
+    elif num_filts == 16 :
+        nrows, ncols = 4, 4
+    else :
+        nrows, ncols = 4, 5
+    
+    outDir = '{}/pngs_bkgdists'.format(cluster)
+    os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
+    
+    # now loop here over all the IDs that are available
+    # open the table of all the objects 
+    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    
+    # mask the table based on the population of interest
+    clustable = clustable[clustable['pop'] == population]
+    
+    IDs = list(clustable['id'])
+    
+    for i in range(len(IDs)) :
+        outfile = '{}/pngs_bkgdists/{}_ID_{}.png'.format(cluster, cluster,
+                                                         IDs[i])
+        
+        segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
+                                                           IDs[i])
+        segMap = core.open_cutout(segPath, simple=True)
+        
+        cutout_segmapped_data = []
+        medians = []
+        bins = []
+        for filt in filters :
+            infile = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster, cluster,
+                                                          IDs[i], filt)
+            data = core.open_cutout(infile, simple=True)
+            
+            if IDs[i] > 20000:
+                mask = (segMap > 0)
+            else :
+                mask = (segMap > 0) & (segMap != IDs[i])
+            segmapped_data = data.copy()
+            segmapped_data[mask] = np.nan
+            
+            segmapped_data = segmapped_data.flatten()
+            non_nan_data = segmapped_data[~np.isnan(segmapped_data)]
+            
+            median = np.median(non_nan_data)
+            num_bins = int(np.ceil(np.cbrt(len(non_nan_data)))) # Rice rule
+                # see https://en.wikipedia.org/wiki/Histogram#Rice_Rule
+            
+            cutout_segmapped_data.append(non_nan_data)
+            medians.append(median)
+            bins.append(num_bins)
+        
+        plt.display_hists(cutout_segmapped_data, nrows, ncols, filters,
+                          medians, bins, outfile, save=True)
+    
+    return
+
 def save_pngs(cluster, filters, population) :
     
     num_filts = len(filters)

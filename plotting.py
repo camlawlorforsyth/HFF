@@ -143,6 +143,36 @@ def display_cutouts(cutout_data, nrows, ncols, filters, flags, outfile,
     
     return
 
+def display_hists(cutout_data, nrows, ncols, filters, medians, num_bins,
+                  outfile, save=False) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(2.4*ncols, 2.4*nrows))
+    currentFig += 1
+    plt.clf()
+    
+    position = range(1, len(cutout_data) + 1)
+    
+    for i in range(len(cutout_data)) :
+        ax = fig.add_subplot(nrows, ncols, position[i])
+        data = cutout_data[i]
+        
+        ax.hist(data, bins=num_bins[i], color='k', histtype='step')
+        
+        ax.set_title('{}:{:.2g}'.format(filters[i], medians[i]), fontsize=13)
+        ax.tick_params(axis='x', labelsize=8)
+        ax.tick_params(axis='y', labelsize=8)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
 def display_image_with_wcs(data, wcs, vmin=None, vmax=None) :
     '''
     Display the given image data with the corresponding WCS.
