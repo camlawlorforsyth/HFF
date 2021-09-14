@@ -120,7 +120,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     # START
     
     population = 'Q' # only consider quiescent galaxies
-    '''
+    
     # ensure the output directory is available
     os.makedirs('{}'.format(cluster), exist_ok=True) 
     if verbose :
@@ -179,11 +179,14 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     photometry.determine_fluxes(cluster, filters)
     if verbose :
         print('Saved photometries to fits files.')
-    '''
     
     # plot and save the surface brightness profiles for every filter, using
     # the photometry file saved above
     checks.save_sbps(cluster, population)
+    
+    # plots and save the SEDs for every annulus/radial bin, using the
+    # photometry file saved above
+    checks.save_seds(cluster, population)
     
     # END
     
@@ -233,13 +236,12 @@ def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False,
     
     return
 
-import numpy as np
 import warnings
 warnings.filterwarnings('ignore')
 
-# main('a370') # redo for 12 filters
+# main('a370')
 # main('a1063')
-# main('a2744') # redo for 9 filters
+# main('a2744')
 # main('m416')
 # main('m717')
 # main('m1149')
@@ -251,6 +253,7 @@ warnings.filterwarnings('ignore')
 # main('m717par')
 # main('m1149par')
 
+# import numpy as np
 # nfilters = np.array([12, 16, 9, 16, 17, 17])
 # ngals = np.array([74, 103, 139, 92, 110, 129]) # quiescent galaxies
 # ncutouts = (2*nfilters + 1)*ngals # noise and science, and one segmap

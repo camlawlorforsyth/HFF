@@ -510,37 +510,146 @@ def save_sbps(cluster, population) :
             pass
         
         flux_columns = [col for col in table.colnames if col.endswith('_flux')]
-        # e_flux_columns = [col.replace('flux', 'err') for col in flux_columns]
         nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
         filternames = [col.replace('_flux', '') for col in flux_columns]
         
-        
-        
+        if len(filternames) == 9 :
+            colors = ['violet',        # F275W
+                      'mediumorchid',  # F336W
+                      'darkslateblue', # F435W
+                      'deepskyblue',   # F606W
+                      'lime',          # F814W
+                      'yellow',        # F105W
+                      'darkorange',    # F125W
+                      'orangered',     # F140W
+                      'red']           # F160W
+        if len(filternames) == 12 :
+            colors = ['violet',        # F275W
+                      'mediumorchid',  # F336W
+                      'darkslateblue', # F435W
+                      'royalblue',     # F475W
+                      'deepskyblue',   # F606W
+                      'cyan',          # F625W
+                      'lime',          # F814W
+                      'yellow',        # F105W
+                      'gold',          # F110W
+                      'darkorange',    # F125W
+                      'orangered',     # F140W
+                      'red']           # F160W
         if len(filternames) == 16 :
-            colors = ['hotpink', 'violet', 'mediumorchid', 'darkviolet',
-                      'darkslateblue', 'royalblue', 'deepskyblue', 'cyan',
-                      'springgreen', 'lime', 'greenyellow', 'yellow', 'gold',
-                      'darkorange', 'orangered', 'red']
+            colors = ['hotpink',       # F225W
+                      'violet',        # F275W
+                      'mediumorchid',  # F336W
+                      'darkviolet',    # F390W
+                      'darkslateblue', # F435W
+                      'royalblue',     # F475W
+                      'deepskyblue',   # F606W
+                      'cyan',          # F625W
+                      'springgreen',   # F775W
+                      'lime',          # F814W
+                      'greenyellow',   # F850LP
+                      'yellow',        # F105W
+                      'gold',          # F110W
+                      'darkorange',    # F125W
+                      'orangered',     # F140W
+                      'red']           # F160W
         if len(filternames) == 17 :
-            colors = ['hotpink', 'violet', 'mediumorchid', 'darkviolet',
-                      'darkslateblue', 'royalblue', 'dodgerblue',
-                      'deepskyblue', 'cyan', 'springgreen', 'lime',
-                      'greenyellow', 'yellow', 'gold', 'darkorange',
-                      'orangered', 'red']
+            colors = ['hotpink',       # F225W
+                      'violet',        # F275W
+                      'mediumorchid',  # F336W
+                      'darkviolet',    # F390W
+                      'darkslateblue', # F435W
+                      'royalblue',     # F475W
+                      'dodgerblue',    # F555W
+                      'deepskyblue',   # F606W
+                      'cyan',          # F625W
+                      'springgreen',   # F775W
+                      'lime',          # F814W
+                      'greenyellow',   # F850LP
+                      'yellow',        # F105W
+                      'gold',          # F110W
+                      'darkorange',    # F125W
+                      'orangered',     # F140W
+                      'red']           # F160W
         
         xs = table['sma']/table['R_e']
-        x_max = (max(xs) + 1)
+        x_max = max(xs) + 1
         
         ys = []
-        for i in range(len(flux_columns)) :
-            maggies_per_pix = list(table[flux_columns[i]]/3631/table[nPix_columns[i]])
+        for j in range(len(flux_columns)) :
+            maggies_per_pix = list(table[flux_columns[j]]/3631/table[nPix_columns[j]])
             ys.append(maggies_per_pix)
         
-        x_label = r'Radius ($R_{\rm e}$)'
-        y_label = r'Spatial Flux Density (maggies pixel$^{-1}$)'
-        
         plt.plot_sed(xs, ys, filternames, colors, outfile,
-                     xlabel=x_label, ylabel=y_label, xmax=x_max, save=True)
+                     xlabel=r'Radius ($R_{\rm e}$)',
+                     ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
+                     xmax=x_max, save=True)
+    
+    return
+
+def save_seds(cluster, population) :
+    
+    from sedpy.observate import load_filters
+    
+    outDir = '{}/pngs_seds'.format(cluster)
+    os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
+    
+    # open the table of all the objects 
+    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    
+    # mask the table based on the population of interest
+    clustable = clustable[clustable['pop'] == population]
+    
+    IDs = list(clustable['id'])
+    
+    for i in range(len(IDs)) :
+        infile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                 cluster,
+                                                                 IDs[i])
+        outfile = '{}/pngs_seds/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
+        
+        try :
+            table = Table.read(infile)
+        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
+            pass
+        
+        flux_columns = [col for col in table.colnames if col.endswith('_flux')]
+        nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
+        filternames = ['hff_' + col.replace('_flux', '') for col in flux_columns]
+        
+        colors = ['red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
+                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
+                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink',
+                  'red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
+                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
+                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink',
+                  'red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
+                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
+                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink']
+        
+        ys = []
+        labels = []
+        for j in range(len(table)) :
+            fluxes = np.array(list(table[flux_columns][j]))/3631 # in maggies
+            nPixels = np.array(list(table[nPix_columns][j]))
+            
+            maggies_per_pix = fluxes/nPixels
+            ys.append(maggies_per_pix)
+            labels.append('bin {}'.format(j))
+        
+        filters = load_filters(filternames)
+        xs = np.array([f.wave_effective for f in filters])
+        
+        x_min, x_max = np.min(xs)*0.8, np.max(xs)/0.8
+        
+        yflat = np.array(ys).flatten()
+        ytemp = yflat[~np.isnan(yflat)]
+        y_min, y_max = np.max([np.min(ytemp), 1e-15])*0.8, np.max(ytemp)/0.4
+        
+        plt.plot_sed(xs, ys, labels, colors, outfile,
+                      xlabel=r'Wavelength ($\rm \AA$)',
+                      ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
+                      xmin=x_min, xmax=x_max, ymin=y_min, ymax=y_max, save=True)
     
     return
 

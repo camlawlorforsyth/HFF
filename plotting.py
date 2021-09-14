@@ -620,7 +620,7 @@ def plot_sed(xs, list_of_ys, labels, colors, outfile, xlabel=None, ylabel=None,
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=8)
     
     plt.tight_layout()
     
