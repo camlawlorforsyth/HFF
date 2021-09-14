@@ -13,7 +13,7 @@ import voronoi
 
 def premain(save_catalogs=False, save_filters=False, plot_curves=False) :
     '''
-    
+    Operations to complete before the main analysis operations.
     
     Parameters
     ----------
@@ -43,7 +43,10 @@ def premain(save_catalogs=False, save_filters=False, plot_curves=False) :
 
 def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     '''
-    
+    The main (preparatory) analysis operations. Determine the final science
+    objects for each cluster and parallel field, save all relevant cutouts,
+    determine bins (annuli) for each galaxy, and determine fluxes for each bin,
+    saving the output into a Prospector-compatible file for subsequent use.
     
     Parameters
     ----------
@@ -116,8 +119,10 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     # START
     
-    os.makedirs('{}'.format(cluster), exist_ok=True) # ensure the output
-        # directory is available
+    population = 'Q' # only consider quiescent galaxies
+    '''
+    # ensure the output directory is available
+    os.makedirs('{}'.format(cluster), exist_ok=True) 
     if verbose :
         print('Created cluster directory.')
     
@@ -126,7 +131,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
                                      redshift_tol_lo=delta_z_lo,
                                      redshift_tol_hi=delta_z_hi,
                                      z_spec=force_spec,
-                                     plot_all=False, plot_uvj=False,
+                                     plot_all=True, plot_uvj=False,
                                      write_final_objs=False,
                                      write_regions=False, selection='FUVVJ')
     if verbose :
@@ -148,11 +153,18 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     # save all the cutouts for all the science objects
     final_objs_path = '{}/{}_final_objects.fits'.format(cluster, cluster)
-    selection = 'Q' # only consider quiescent galaxies
     field.save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
-                       selection, models, z_spec=force_spec)
+                       population, models, z_spec=force_spec)
     if verbose :
         print('Saved all science, noise, and segmentation map cutouts.')
+    
+    # save pngs of the cutouts for visual inspection
+    checks.save_pngs(cluster, filters, population)
+    
+    # now visually inspect all the cutouts to ensure the final objects are
+    # reasonable and have no glaring issues, saving issues to
+    # `cluster`_issues.csv. Then combine the issues file with the objects file
+    # field.combine_final_issues(cluster)
     
     # now bin the cutouts for each galaxy and save the resulting files
     if vorbin :
@@ -167,11 +179,11 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     photometry.determine_fluxes(cluster, filters)
     if verbose :
         print('Saved photometries to fits files.')
+    '''
     
-    # check how many annuli there are per galaxy
-    checks.check_bins(cluster)
-    if verbose :
-        print('Plotted annuli histogram.')
+    # plot and save the surface brightness profiles for every filter, using
+    # the photometry file saved above
+    checks.save_sbps(cluster, population)
     
     # END
     
@@ -180,7 +192,29 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     return
 
-def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False) :
+def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False,
+             dists=False, bins=False) :
+    '''
+    Operations to complete after the main analysis operations.
+    
+    Parameters
+    ----------
+    total_FUVVJ : bool, optional
+        Flag to plot the FUV-V-J diagram for all objects. The default is False.
+    total_UVJ : bool, optional
+        Flag to plot the UVJ diagram for all objects. The default is False.
+    parallel_objects : bool, optional
+        Flag to plot all parallel objects simultaneously. The default is False.
+    dists : bool, optional
+        Flag to plot redshift and logmass distributions. The default is False.
+    bins : bool, optional
+        Flag to plot distributions of the number of bins. The default is False.
+    
+    Returns
+    -------
+    None.
+    
+    '''
     
     if total_FUVVJ :
         checks.plot_all_FUVVJ()
@@ -189,6 +223,53 @@ def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False) :
         checks.plot_all_UVJ()
     
     if parallel_objects :
-        checks.plot_all_parallel_objects_all()
+        checks.plot_parallel_objects_all()
+    
+    if dists :
+        checks.check_distributions()
+    
+    if bins :
+        checks.check_all_bins()
     
     return
+
+import numpy as np
+import warnings
+warnings.filterwarnings('ignore')
+
+# main('a370') # redo for 12 filters
+# main('a1063')
+# main('a2744') # redo for 9 filters
+# main('m416')
+# main('m717')
+# main('m1149')
+
+# main('a370par')
+# main('a1063par')
+# main('a2744par')
+# main('m416par')
+# main('m717par')
+# main('m1149par')
+
+# nfilters = np.array([12, 16, 9, 16, 17, 17])
+# ngals = np.array([74, 103, 139, 92, 110, 129]) # quiescent galaxies
+# ncutouts = (2*nfilters + 1)*ngals # noise and science, and one segmap
+
+# cc = 299792.458
+# zs = np.array([0.375, 0.348, 0.308, 0.396, 0.545, 0.543])
+# print(zs)
+# sigmas = np.array([1170, 1840, 1497, 955, 1660, 1840])
+# deltas = (3*sigmas/cc)*(1+zs)
+# print(deltas)
+# Ha = 6562.8
+# print(Ha*(1+zs))
+
+# from astropy.cosmology import FlatLambdaCDM
+# cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
+# hi = cosmo.lookback_time(np.inf)
+# lims = np.array([0, 0.03, 0.1, 0.5, 1, 3.3587269499417567,
+#                  5.717453899883513, 8.07618084982527, 10.434907799767027,
+#                  12.793634749708783, 13.466983947061877])*1e9
+# agelims = np.log10(lims)
+# agelims[0] = 0
+# agebins = np.array([agelims[:-1], agelims[1:]]).T

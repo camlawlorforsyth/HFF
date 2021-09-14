@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib import cm
+import matplotlib.colors as clrs
 from matplotlib.colors import LogNorm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -66,6 +67,79 @@ def display_annuli(data, xy, rins, eta, theta, bad='black', cbar_label='',
     
     plt.tight_layout()
     plt.show()
+    
+    return
+
+def display_cutouts(cutout_data, nrows, ncols, filters, flags, outfile,
+                    save=False) :
+    '''
+    Display all the cutouts for a given galaxy, saving the resulting file if
+    desired.
+    
+    Parameters
+    ----------
+    cutout_data : list
+        List of cutout data, with the same length as filters.
+    nrows : int
+        Number of subplot rows.
+    ncols : int
+        Number of subplot columns.
+    filters : list
+        List of filters used for the observations.
+    flags : list
+        List of flag values, one per filter.
+    outfile : string
+        The name of the output file.
+    save : bool, optional
+        Flag to save the complete image. The default is False.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(2.5*ncols, 2.5*nrows))
+    currentFig += 1
+    plt.clf()
+    
+    position = range(1, len(cutout_data) + 1)
+    
+    # old version
+    # cmap = cm.inferno
+    # cmap.set_bad('white', 1)
+    # cmap.set_under('white', 1)
+    
+    for i in range(len(cutout_data)) :
+        if flags[i] == 0 :
+            fw = 'normal'
+        else :
+            fw = 'bold'
+        
+        ax = fig.add_subplot(nrows, ncols, position[i])
+        data = cutout_data[i]
+        
+        # new version
+        pos = np.ma.masked_array(data, data <= 0)
+        neg = np.ma.masked_array(data, data > 0)
+        ax.imshow(pos, origin='lower', norm=LogNorm(), cmap='inferno')
+        ax.imshow(-neg, origin='lower', norm=LogNorm(), cmap='gray')
+        
+        # old version
+        # ax.imshow(data, origin='lower', norm=LogNorm(), cmap=cmap)
+        
+        ax.axis('off')
+        ax.set_title('{} : {}'.format(filters[i], flags[i]), fontsize=13,
+                     fontweight=fw)
+    
+    if save :
+        plt.tight_layout()
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.tight_layout()
+        plt.show()
     
     return
 
@@ -148,7 +222,7 @@ def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray,
     frame = ax.imshow(data, origin='lower', cmap=cmap, norm=norm,
                       vmin=vmin, vmax=vmax)
     cbar = plt.colorbar(frame)
-    cbar.set_label(cbar_label)
+    cbar.set_label(cbar_label, fontsize=15)
     
     # for i in range(len(xs)) :
     #     plt.arrow(dim[1]/2, dim[0]/2, xs[i], ys[i], color='r')
@@ -164,7 +238,8 @@ def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray,
     
     return
 
-def histogram(data, label, title=None, bins=None, log=False) :
+def histogram(data, label, title=None, bins=None, log=False, histtype='bar',
+              vlines=[], colors=[], labels=[]) :
     
     global currentFig
     fig = plt.figure(currentFig)
@@ -173,21 +248,70 @@ def histogram(data, label, title=None, bins=None, log=False) :
     ax = fig.add_subplot(111)
     
     if bins and not log :
-        ax.hist(data, bins=bins)
+        ax.hist(data, bins=bins, color='k', histtype=histtype)
     elif bins and log :
-        ax.hist(data, bins=bins, log=log)
+        ax.hist(data, bins=bins, log=log, color='k', histtype=histtype)
     elif log and not bins :
-        ax.hist(data, log=log)
+        ax.hist(data, log=log, color='k', histtype=histtype)
     else :
-        ax.hist(data)
+        ax.hist(data, histtype=histtype)
     
-    ax.set_xlabel('%s' % label, fontsize = 15)
+    if len(vlines) > 0 :
+        for i in range(len(vlines)) :
+            ax.axvline(vlines[i], ls='--', color=colors[i], lw=1, alpha=0.5,
+                        label=labels[i])
+    
+    ax.set_xlabel('{}'.format(label), fontsize = 15)
     if title :
         if title[0] == 'a' :
             title = 'Abell ' + title[1:]
         if title[0] == 'm' :
             title = 'MACS J' + title[1:]
     ax.set_title(title, fontsize=18)
+    
+    if len(vlines) > 0 :
+        ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+                  fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def histogram_multi(data, label, bins=[], log=False, histtype='step',
+                    colors=[], labels=[], styles=[],
+                    xmin=None, xmax=None, ymin=None, ymax=None) :
+    
+    global currentFig
+    fig = plt.figure(currentFig)
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    if bins and not log :
+        for i in range(len(data)) :
+            ax.hist(data[i], bins=bins[i], color=colors[i], histtype=histtype,
+                    label=labels[i], linestyle=styles[i])
+    elif bins and log :
+        for i in range(len(data)) :
+            ax.hist(data[i], bins=bins[i], color=colors[i], histtype=histtype,
+                    label=labels[i], log=log, linestyle=styles[i])
+    elif log and not bins :
+        for i in range(len(data)) :
+            ax.hist(data[i], color=colors[i], histtype=histtype, log=log,
+                    label=labels[i], linestyle=styles[i])
+    else :
+        for i in range(len(data)) :
+            ax.hist(data[i], color=colors[i], histtype=histtype,
+                    label=labels[i], linestyle=styles[i])
+    
+    ax.set_xlabel('{}'.format(label), fontsize = 15)
+    # ax.set_xscale('log')
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(loc='upper right', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
     
     plt.tight_layout()
     plt.show()
@@ -266,16 +390,16 @@ def hst_transmission_curves(table, plot=True) :
               'greenyellow', 'darkorange',
               'violet', 'darkviolet', 'dodgerblue', 'yellow', 'orangered',
               'darkslateblue', 'deepskyblue', 'lime', 'gold', 'red']
-    text_x = [2100, 3125, 4500, 6050, 7500, 8700, 12250,
-              2500, 3700, 5150, 10300, 13850,
-              4100, 5650, 7900, 11300, 15200] # horizontal label positions
-    text_y = [1.22, 1.28, 1.35, 1.4, 1.4, 1.28, 1.45,
-              0.62, 0.7, 0.75, 0.8, 0.85,
-              0.15, 0.2, 0.15, 0.225, 0.25] # vertical label positions
+    text_x = [2000, 2975, 4350, 5900, 7350, 8650, 12100,
+              2375, 3525, 4975, 10150, 13650,
+              3950, 5575, 7700, 11100, 15050] # horizontal label positions
+    text_y = [1.32, 1.42, 1.35, 1.4, 1.4, 1.26, 1.45,
+              0.75, 0.68, 0.75, 0.8, 0.85,
+              0.13, 0.2, 0.15, 0.225, 0.25] # vertical label positions
     
     if plot :
         plot_transmission_curves(wavelengths, filters, labels, colors,
-                                 text_x, text_y, r'Wavelength ($\rm \AA$)',
+                                 text_x, text_y, r'Wavelength ($\mathrm{\AA}$)',
                                  'Integrated System Throughput',
                                  xmin=1750, xmax=17500, ymin=0, ymax=1.8,
                                  ytick_labels=[0.0, 0.2, 0.4, 0.6,
@@ -440,10 +564,14 @@ def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers, colors,
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     if title :
-        if title[0] == 'a' :
-            title = 'Abell ' + title[1:]
-        if title[0] == 'm' :
+        if title == 'a1063' :
+            title = 'Abell S' + title[1:]
+        elif title == 'm1149' :
             title = 'MACS J' + title[1:]
+        elif title[0] == 'a' :
+            title = 'Abell ' + title[1:]
+        elif title[0] == 'm' :
+            title = 'MACS J0' + title[1:]
     ax.set_title(title, fontsize=18)
     
     ax.set_xlim(xmin, xmax)
@@ -464,6 +592,72 @@ def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers, colors,
         axins.set_xlim(7, 12.5)
         axins.set_ylim(redshift-2*redshift_tol_lo, redshift+2*redshift_tol_hi)
     
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_sed(xs, list_of_ys, labels, colors, outfile, xlabel=None, ylabel=None,
+             xmin=None, xmax=None, ymin=None, ymax=None, save=False,
+             figsizewidth=12, figsizeheight=9, style='--', xlog=False) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    for i in range(len(list_of_ys)) :
+        ax.plot(xs, list_of_ys[i], style, color=colors[i], label=labels[i])
+    
+    ax.set_yscale('log')
+    if xlog :
+        ax.set_xscale('log')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
+def plot_simple(xs, ys, yerr, xerr=None, label='',
+                xlabel=None, ylabel=None, title=None,
+                xmin=None, xmax=None, ymin=None, ymax=None,
+                figsizewidth=9, figsizeheight=6) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    ax.plot(xs, ys, 'r-', zorder=1)
+    ax.errorbar(xs, ys, xerr=xerr, yerr=yerr, fmt='k.', label=label, zorder=2,
+                elinewidth=1)
+    # ax.plot(xs, ys, 'ko', label=label, zorder=2)
+    
+    ax.set_yscale('log')
+    # ax.set_xscale('log')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    if label :
+        ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
     
     plt.tight_layout()
     plt.show()
@@ -528,19 +722,19 @@ def plot_transmission_curves(wavelengths, throughputs, labels, colors,
         #         label=labels[i])
         ax.fill_between(wavelengths[i], 1.2, 1.2+throughputs[i],
                         color=colors[i], alpha=0.4)
-        ax.text(text_x[i], text_y[i], s=labels[i])
+        ax.text(text_x[i], text_y[i], s=labels[i], fontsize=15)
     for i in range(7, 12) :
         # ax.plot(wavelengths[i], 0.6+throughputs[i], '-', color=colors[i],
         #         label=labels[i])
         ax.fill_between(wavelengths[i], 0.6, 0.6+throughputs[i],  
                         color=colors[i], alpha=0.4)
-        ax.text(text_x[i], text_y[i], s=labels[i])
+        ax.text(text_x[i], text_y[i], s=labels[i], fontsize=15)
     for i in range(12, len(wavelengths)) :
         # ax.plot(wavelengths[i], throughputs[i], '-', color=colors[i],
         #         label=labels[i])
         ax.fill_between(wavelengths[i], 0, throughputs[i],
                         color=colors[i], alpha=0.4)
-        ax.text(text_x[i], text_y[i], s=labels[i])
+        ax.text(text_x[i], text_y[i], s=labels[i], fontsize=15)
     
     ax.axhline(0.0, ls='-', color='k', lw=1.5)
     ax.axhline(0.6, ls='-', color='k', lw=1.5)
@@ -550,11 +744,13 @@ def plot_transmission_curves(wavelengths, throughputs, labels, colors,
         ax.set_yticks(np.arange(0, 2, 0.2))
         ax.set_yticklabels(np.asarray(ytick_labels, dtype=np.str))
     
+    ax.tick_params(axis='both', which='major', labelsize=15)
+    
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     
-    ax.set_xlabel(xlabel, fontsize=15)
-    ax.set_ylabel(ylabel, fontsize=15)
+    ax.set_xlabel(xlabel, fontsize=22)
+    ax.set_ylabel(ylabel, fontsize=22)
     
     plt.tight_layout()
     plt.show()

@@ -4,10 +4,35 @@ import numpy as np
 
 import astropy.constants as const
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import join, Table
 import astropy.units as u
 
 from core import save_cutout
+
+def combine_with_issues(cluster) :
+    '''
+    Join the final science objects with the issues file, saving the result.
+    
+    Parameters
+    ----------
+    cluster : string
+        Operate on the files of this cluster.
+    
+    Returns
+    -------
+    None.
+    
+    '''
+    
+    sci_objs = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    issues = Table.read('{}/{}_issues.csv'.format(cluster, cluster))
+    
+    combined = join(sci_objs, issues, keys='id')
+    
+    combined = combined[combined['id'] < 20000]
+    combined.write('{}/{}_nonbCG_QGs.fits'.format(cluster, cluster))
+    
+    return
 
 def determine_rms(segPath, files) :
     '''
@@ -148,7 +173,7 @@ def save_filterset(cluster, filters) :
     
     '''
     
-    filterset_file = '{}/filters.txt'.format(cluster)
+    filterset_file = '{}/{}_filters.txt'.format(cluster, cluster)
     with open(filterset_file, 'a+') as file :
         for filt in filters :
             file.write('hff_{}\n'.format(filt))

@@ -161,5 +161,6 @@ dmypy.json
 *.csv
 *.npz
 *.par
+*.png
 *.reg
 *.txt

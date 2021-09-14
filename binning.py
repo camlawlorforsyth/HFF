@@ -114,13 +114,18 @@ def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
     xx, yy = np.indices(dim)
     x0, y0 = np.median(xx), np.median(yy)
     
-    # make a copy of the science image based on the segmentation map
+    # make a copy of the science image and noise image
     new_sci = sci.copy()
-    new_sci[(segMap > 0) & (segMap != ID)] = 0 # don't mask out the sky
-    
-    # and for the noise image as well
     new_noise = noise.copy()
-    new_noise[(segMap > 0) & (segMap != ID)] = 0
+    
+    # mask the copied images based on the segmentation map, but don't mask out
+    # the sky
+    if ID >= 20000 : # the bCGs aren't in the segmap, so mask any other galaxy
+        new_sci[segMap > 0] = 0
+        new_noise[segMap > 0] = 0
+    else : # for the non-bCGs, mask out pixels associated with other galaxies
+        new_sci[(segMap > 0) & (segMap != ID)] = 0
+        new_noise[(segMap > 0) & (segMap != ID)] = 0
     
     dr = max(IR_pixel_scale/image_pixel_scale, 0.1*r_e)
     pa = np.pi*pa_deg/180
@@ -306,3 +311,9 @@ def elliptical_mask(dim, xy, rin, eta, pa) :
     mask = ellipse <= 1
     
     return mask
+
+# simple testing purposes - place on line 53
+# f160w_files = ['m416/cutouts/m416_ID_2876_f160w.fits']
+# IDs = ['2876']
+# noise_files = ['m416/cutouts/m416_ID_2876_f160w_noise.fits']
+# segmap_files = ['m416/cutouts/m416_ID_2876_segmap.fits']

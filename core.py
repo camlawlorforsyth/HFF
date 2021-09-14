@@ -511,6 +511,11 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     pop_type  = np.char.replace(pop_type, 'S', 'SF')
     final['pop'] = pop_type
     
+    # QG_mask, SF_mask = (final['pop'] == 'Q'), (final['pop'] == 'SF')
+    # QGs, SFGs = final.copy(), final.copy()
+    # QGs, SFGs = QGs[QG_mask], SFGs[SF_mask]
+    # print('{}: {} QGs, {} SFGs'.format(cluster, len(QGs), len(SFGs)))
+    
     if plot_uvj :
         plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
                      final['M_AB_U'] - final['M_AB_V'],
@@ -526,7 +531,7 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     
     return
 
-def open_cutout(infile) :
+def open_cutout(infile, simple=False) :
     '''
     Open a cutout image. If opening the F160W image in order to compute the
     Voroni bins, then also return the total exposure time for that image,
@@ -558,7 +563,10 @@ def open_cutout(infile) :
         data = hdu[0].data
         dim = data.shape
     
-    return data, dim, photfnu, R_e, redshift, sma, smb, pa
+    if simple :
+        return data
+    else :
+        return data, dim, photfnu, R_e, redshift, sma, smb, pa
 
 def save_cutout(xx, yy, angular_size, data, outfile, exposure, photfnu, scale,
                 rms, r_e, redshift, sma, smb, pa, vmin=None, vmax=None,
@@ -660,9 +668,12 @@ def save_regions(cluster, table) :
     
     '''
     
-    q_region_file = '{}/{}_final_QGs_R_e.reg'.format(cluster, cluster)
-    sf_region_file = '{}/{}_final_SFGs_R_e.reg'.format(cluster, cluster)
-    bCG_region_file = '{}/{}_final_bCGs_R_e.reg'.format(cluster, cluster)
+    outDir = '{}/regions'.format(cluster)
+    os.makedirs(outDir, exist_ok=True)
+    
+    q_region_file = '{}/{}_final_QGs_R_e.reg'.format(outDir, cluster)
+    sf_region_file = '{}/{}_final_SFGs_R_e.reg'.format(outDir, cluster)
+    bCG_region_file = '{}/{}_final_bCGs_R_e.reg'.format(outDir, cluster)
     
     first = '# Region file format: DS9 version 4.1\n'
     q_second = ('global color=red width=2 select=1 ' +
@@ -704,6 +715,18 @@ def save_regions(cluster, table) :
                 string = 'circle({},{},{}") # {}\n'.format(
                     str(table['ra'][i]), str(table['dec'][i]),
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
+                file.write(string)
+    
+    with open('{}/{}_bCGs_sqr.reg'.format(cluster, cluster), 'a+') as file :
+        file.write(first)
+        file.write(q_second)
+        file.write('physical\n')
+        for i in range(len(table)) :
+            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] == 'bcg') :
+                string = 'box({},{},{},{},0) # {}\n'.format(
+                    str(table['x'][i]), str(table['y'][i]),
+                    str(table['flux_radius'][i]*10),
+                    str(table['flux_radius'][i]*10), str(table['id'][i]))
                 file.write(string)
     
     return

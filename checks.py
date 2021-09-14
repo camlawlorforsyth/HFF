@@ -1,53 +1,268 @@
 
 import os
+import glob
 import numpy as np
 
 from astropy.table import Table, vstack
 from scipy.stats import kde
 
+import core
 import plotting as plt
 
-def check_bins(cluster, plot=True) :
+def check_all_bins(plot=False, use_saved=False) :
     
-    photDir = '{}/photometry'.format(cluster)
-    files = os.listdir(photDir)
+    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
     
-    lengths = []
-    for file in files :
-        table = Table.read('{}/{}'.format(photDir, file))
-        length = len(table)
-        lengths.append(length)
-    
+    if use_saved :
+        annuli_nums = np.load('number_of_annuli.npz')
+        nbCG_QG_lengths = annuli_nums['nonbCGs']
+        bCG_lengths = annuli_nums['bCGs']
+        
+        total_annuli = np.sum(nbCG_QG_lengths) + np.sum(bCG_lengths)
+        print(total_annuli)
+        
+    else :
+        nbCG_QG_lengths, bCG_lengths = [], []
+        for cluster in clusters :
+            photDir = '{}/photometry'.format(cluster)
+            phot_paths = '{}/{}_ID_*_photometry.fits'.format(photDir, cluster)
+            phot_file_list = glob.glob(phot_paths)
+            IDs = []
+            for file in phot_file_list :
+                file = file.replace(os.sep, '/')
+                IDs.append(file.split('_')[2])
+            
+            IDs = np.array(IDs)
+            IDs = IDs.astype(int)
+            nbCG_QG_IDs = IDs[IDs < 20000]
+            bCG_IDs = IDs[IDs > 20000]
+            
+            for i in range(len(nbCG_QG_IDs)) :
+                table = Table.read(
+                    '{}/{}_ID_{}_photometry.fits'.format(photDir, cluster,
+                                                         nbCG_QG_IDs[i]))
+                length = len(table)
+                nbCG_QG_lengths.append(length)
+            
+            for i in range(len(bCG_IDs)) :
+                table = Table.read(
+                    '{}/{}_ID_{}_photometry.fits'.format(photDir, cluster,
+                                                         bCG_IDs[i]))
+                length = len(table)
+                bCG_lengths.append(length)
+        
+        np.savez('number_of_annuli.npz', nonbCGs=nbCG_QG_lengths,
+                                         bCGs=bCG_lengths)
     if plot :
-        numBins = int(np.ceil(1.3*np.sqrt(len(lengths))))
-        plt.histogram(lengths, 'Number of Annuli per Galaxy', title=cluster,
-                      bins=numBins)
+        numBins1 = int(np.ceil(np.sqrt(len(nbCG_QG_lengths))))
+        numBins2 = int(np.ceil(np.sqrt(len(bCG_lengths))))
+        
+        plt.histogram_multi([nbCG_QG_lengths, bCG_lengths], 'Number of Annuli',
+                            bins=[numBins1, numBins2], colors=['k', 'm'],
+                            labels=['non-bCG QGs', 'bCGs'], styles=['--', '-'])
     
     return
 
-def concatenate_all() :
+def check_distributions() :
+    
+    all_clusters = concatenate_all()
+    all_clusters = all_clusters[all_clusters['pop'] == 'Q']
+    
+    bins = int(np.round(np.sqrt(len(all_clusters))))
+    
+    redshift = all_clusters['z_spec']
+    mstar = all_clusters['lmass']
+    r_e = all_clusters['flux_radius']
+    
+    plt.histogram(redshift, r'$z_{\rm spec}$', bins=bins, histtype='step',
+                  vlines=[0.308, 0.375, 0.396, 0.545, 0.543, 0.348],
+                  colors=['purple', 'g', 'gold', 'r', 'orange', 'b'],
+                  labels=['A2744', 'A370', 'M416', 'M717', 'M1149', 'AS1063'])
+    
+    plt.histogram(mstar, r'$\log(M_{*}/M_{\odot})$', bins=bins,
+                  histtype='step')
+    
+    plt.histogram(np.log10(r_e), r'$\log(R_{\rm e}/{\rm pix})$',
+                  bins=bins, histtype='step')
+    
+    return
+
+def check_SNR(filt) :
+    
+    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+    
+    SNRs_lo, SNRs_med, SNRs_hi = [], [], []
+    for cluster in clusters :
+        
+        inDir = '{}/cutouts'.format(cluster)
+        
+        cluster_table = Table.read('{}/{}_final_objects.fits'.format(
+            cluster, cluster))
+        
+        mask = (cluster_table['id'] < 20000) & (cluster_table['pop'] == 'Q')
+        cluster_table = cluster_table[mask]
+        
+        lo_mask = cluster_table['lmass'] < 8.78
+        med_mask = ((cluster_table['lmass'] >= 9.52) &
+                    (cluster_table['lmass'] <= 9.76))
+        hi_mask = cluster_table['lmass'] >= 10.5
+        
+        lo_table = cluster_table.copy()
+        med_table = cluster_table.copy()
+        hi_table = cluster_table.copy()
+        
+        lo_table = lo_table[lo_mask]
+        med_table = med_table[med_mask]
+        hi_table = hi_table[hi_mask]
+        
+        for ID in lo_table['id'] :
+            sci_file = '{}/{}_ID_{}_{}.fits'.format(inDir, cluster, ID, filt)
+            noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(inDir, cluster,
+                                                            ID, filt)
+            segmap_file = '{}/{}_ID_{}_segmap.fits'.format(inDir, cluster, ID)
+            
+            try :
+                sci = core.open_cutout(sci_file, simple=True)
+                noise = core.open_cutout(noise_file, simple=True)
+                segmap = core.open_cutout(segmap_file, simple=True)
+                
+                SNR = sci/noise
+                SNR[(segmap != ID)] = np.nan
+                SNR_flat = SNR.flatten()
+                
+                SNR_flat = SNR_flat[~np.isnan(SNR_flat)] # remove nans
+                
+                for val in SNR_flat :
+                    SNRs_lo.append(val)
+            except :
+                pass
+        
+        for ID in med_table['id'] :
+            sci_file = '{}/{}_ID_{}_{}.fits'.format(inDir, cluster, ID, filt)
+            noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(inDir, cluster,
+                                                            ID, filt)
+            segmap_file = '{}/{}_ID_{}_segmap.fits'.format(inDir, cluster, ID)
+            
+            try :
+                sci = core.open_cutout(sci_file, simple=True)
+                noise = core.open_cutout(noise_file, simple=True)
+                segmap = core.open_cutout(segmap_file, simple=True)
+                
+                SNR = sci/noise
+                SNR[(segmap != ID)] = np.nan
+                SNR_flat = SNR.flatten()
+                
+                SNR_flat = SNR_flat[~np.isnan(SNR_flat)]
+                
+                for val in SNR_flat :
+                    SNRs_med.append(val)
+            except :
+                pass
+        
+        for ID in hi_table['id'] :
+            sci_file = '{}/{}_ID_{}_{}.fits'.format(inDir, cluster, ID, filt)
+            noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(inDir, cluster,
+                                                            ID, filt)
+            segmap_file = '{}/{}_ID_{}_segmap.fits'.format(inDir, cluster, ID)
+            
+            try :
+                sci = core.open_cutout(sci_file, simple=True)
+                noise = core.open_cutout(noise_file, simple=True)
+                segmap = core.open_cutout(segmap_file, simple=True)
+                
+                SNR = sci/noise
+                SNR[(segmap != ID)] = np.nan
+                SNR_flat = SNR.flatten()
+                
+                SNR_flat = SNR_flat[~np.isnan(SNR_flat)]
+                
+                for val in SNR_flat :
+                    SNRs_hi.append(val)
+            except :
+                pass
+    
+    lo_label = r'$\log(M_{*}/M_\odot) < 8.78$'
+    med_label = r'$9.52 \leq \log(M_{*}/M_\odot) \leq 9.76$'
+    hi_label = r'$\log(M_{*}/M_\odot) \geq 10.5$'
+    
+    plt.histogram_multi([SNRs_lo, SNRs_med, SNRs_hi],
+                        '{} SNR'.format(filt),
+                        bins=[70, 70, 70],
+                        log=True,
+                        histtype='step',
+                        colors=['k', 'g', 'm'],
+                        labels=[lo_label, med_label, hi_label],
+                        styles=[':', '--', '-'],
+                        xmin=0.1, xmax=1300, ymin=1, ymax=2e5)
+    
+    return
+
+def check_total_flux(filt) :
+    
+    all_clusters = concatenate_all()
+    all_clusters = all_clusters[(all_clusters['pop'] == 'Q') &
+                                (all_clusters['id'] < 20000)]
+    all_clusters.remove_row(92) # A1063 ID 4746 - no photometry file
+    all_clusters.remove_row(109) # A1063 ID 5638 - no photometry file
+    
+    IDs = all_clusters['id']
+    clusters = all_clusters['cluster']
+    cat_filt = filt.upper()
+    f_cat = all_clusters['f_{}'.format(cat_filt)]
+    e_cat = all_clusters['e_{}'.format(cat_filt)]
+    
+    f_calc, e_calc = [], []
+    for i in range(len(all_clusters)) :
+        phot_path = '{}/photometry/{}_ID_{}_photometry.fits'.format(
+                clusters[i], clusters[i], IDs[i])
+        table = Table.read(phot_path)
+        flux_col = table['{}_flux'.format(filt)]
+        flux = np.sum(flux_col)
+        err_col = table['{}_err'.format(filt)]
+        err = np.sqrt(np.sum(np.square(err_col)))
+        f_calc.append(flux)
+        e_calc.append(err)
+    
+    m_cat = -2.5*np.log10(f_cat) + 25
+    m_calc = -2.5*np.log10(f_calc) + 8.9
+    
+    delta_m_cat = 2.5/np.log(10)*np.abs(e_cat/f_cat)
+    delta_m_calc = 2.5/np.log(10)*np.abs(np.array(e_calc)/np.array(f_calc))
+    
+    plt.plot_simple(m_cat, m_calc, delta_m_calc, xerr=delta_m_cat,
+                    xlabel=r'$m_{\rm AB_{\rm cat}}$',
+                    ylabel=r'$m_{\rm AB_{\rm calc}}$',
+                    xmin=25, xmax=17.8, ymin=26, ymax=17.8)
+    
+    return
+
+def concatenate_all(both=False) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
     all_clusters_list = []
-    all_parallels_list = []
+    
     for cluster in clusters :
         cluster_table = Table.read('{}/{}_final_objects.fits'.format(
             cluster, cluster))
         cluster_table['cluster'] = cluster
         all_clusters_list.append(cluster_table)
-        parallel_table = Table.read('{}par/{}par_final_objects.fits'.format(
-            cluster, cluster))
-        parallel_table['field'] = '{}par'.format(cluster)
-        all_parallels_list.append(parallel_table)
-    
     all_clusters = vstack(all_clusters_list)
-    all_parallels = vstack(all_parallels_list)
     
-    return all_clusters, all_parallels
+    if both :
+        all_parallels_list = []
+        for cluster in clusters :
+            parallel_table = Table.read(
+                '{}par/{}par_final_objects.fits'.format(cluster, cluster))
+            parallel_table['field'] = '{}par'.format(cluster)
+            all_parallels_list.append(parallel_table)
+        all_parallels = vstack(all_parallels_list)
+        return all_clusters, all_parallels
+    else :
+        return all_clusters
 
 def plot_all_FUVVJ() :
     
-    all_clusters, all_parallels = concatenate_all()
+    all_clusters, all_parallels = concatenate_all(both=True)
     
     cluster_q = all_clusters[all_clusters['pop'] == 'Q']
     cluster_sf = all_clusters[all_clusters['pop'] == 'SF']
@@ -102,12 +317,12 @@ def plot_all_FUVVJ() :
                               [0.6, 0.6, 0.5, 0.5],
                               [q_xi, sf_xi], [q_yi, sf_yi], [q_z, sf_z],
                               version='FUVVJ',
-                              xlabel=r'$V - J$', ylabel=r'$FUV - V$',
+                              xlabel=r'V$-$J', ylabel=r'FUV$-$V',
                               xmin=0, xmax=2.1, ymin=0, ymax=8.4, loc=2)
 
 def plot_all_UVJ() :
     
-    all_clusters, all_parallels = concatenate_all()
+    all_clusters, all_parallels = concatenate_all(both=True)
     
     cluster_q = all_clusters[all_clusters['pop'] == 'Q']
     cluster_sf = all_clusters[all_clusters['pop'] == 'SF']
@@ -162,15 +377,14 @@ def plot_all_UVJ() :
                               [0.6, 0.6, 0.5, 0.5],
                               [q_xi, sf_xi], [q_yi, sf_yi], [q_z, sf_z],
                               version='UVJ',
-                              xlabel=r'$V - J$', ylabel=r'$U - V$',
+                              xlabel=r'V$-$J', ylabel=r'U$-$V',
                               xmin=0, xmax=2.1, ymin=0, ymax=2.4, loc=4)
     
     return
 
-
 def plot_parallel_objects_all() :
     
-    all_clusters, all_parallels = concatenate_all()
+    all_clusters, all_parallels = concatenate_all(both=True)
     
     xs = [all_parallels['lmass']]
     ys = [all_parallels['z']]
@@ -201,3 +415,137 @@ def plot_parallel_objects_all() :
     #                  xmin=2, xmax=14, ymin=0, ymax=0.9)
     
     return
+
+def save_pngs(cluster, filters, population) :
+    
+    num_filts = len(filters)
+    if num_filts == 9 :
+        nrows, ncols = 3, 3
+    elif num_filts == 12 :
+        nrows, ncols = 3, 4
+    elif num_filts == 16 :
+        nrows, ncols = 4, 4
+    else :
+        nrows, ncols = 4, 5
+    
+    outDir = '{}/pngs'.format(cluster)
+    outDirAlt = '{}/pngs_segmap'.format(cluster)
+    
+    # os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
+        # directory for the pngs is available
+    os.makedirs('{}'.format(outDirAlt), exist_ok=True)
+    
+    # open the table of all the objects 
+    table = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    
+    # mask the table based on the population of interest
+    table = table[table['pop'] == population]
+    
+    # determine the band flags that are in the catalog
+    band_flags = [string for string in table.colnames if 'flag_F' in string]
+    
+    # use only those columns to create a new subtable
+    flag_table = Table([table[band_flag] for band_flag in band_flags],
+                       names=tuple(band_flags))
+    
+    # create a list of the flags per band for each galaxy
+    flags = []
+    for row in flag_table.iterrows() :
+        flags.append(list(row))
+    
+    IDs = list(table['id'])
+    for i in range(len(IDs)) :
+        segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
+                                                           IDs[i])
+        segMap, _, _, _, _, _, _, _ = core.open_cutout(segPath)
+        
+        outfile = outDir + '/{}_ID_{}.png'.format(cluster, IDs[i])
+        outfile_segmapped = outDirAlt + '/{}_ID_{}.png'.format(cluster, IDs[i])
+        
+        cutout_data = []
+        cutout_segmapped = []
+        for filt in filters :
+            infile = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster, cluster,
+                                                          IDs[i], filt)
+            data, _, _, _, _, _, _, _ = core.open_cutout(infile)
+            cutout_data.append(data)
+            
+            if IDs[i] > 20000:
+                mask = (segMap > 0)
+            else :
+                mask = (segMap > 0) & (segMap != IDs[i])
+            segmapped_data = data.copy()
+            segmapped_data[mask] = 0
+            cutout_segmapped.append(segmapped_data)
+        
+        # plt.display_cutouts(cutout_data, nrows, ncols, filters, flags[i],
+        #                     outfile, save=True)
+        plt.display_cutouts(cutout_segmapped, nrows, ncols, filters, flags[i],
+                            outfile_segmapped, save=True)
+    
+    return
+
+def save_sbps(cluster, population) :
+    
+    outDir = '{}/pngs_sbps'.format(cluster)
+    os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
+    
+    # open the table of all the objects 
+    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    
+    # mask the table based on the population of interest
+    clustable = clustable[clustable['pop'] == population]
+    
+    IDs = list(clustable['id'])
+    
+    for i in range(len(IDs)) :
+        infile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                 cluster,
+                                                                 IDs[i])
+        outfile = '{}/pngs_sbps/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
+        
+        try :
+            table = Table.read(infile)
+        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
+            pass
+        
+        flux_columns = [col for col in table.colnames if col.endswith('_flux')]
+        # e_flux_columns = [col.replace('flux', 'err') for col in flux_columns]
+        nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
+        filternames = [col.replace('_flux', '') for col in flux_columns]
+        
+        
+        
+        if len(filternames) == 16 :
+            colors = ['hotpink', 'violet', 'mediumorchid', 'darkviolet',
+                      'darkslateblue', 'royalblue', 'deepskyblue', 'cyan',
+                      'springgreen', 'lime', 'greenyellow', 'yellow', 'gold',
+                      'darkorange', 'orangered', 'red']
+        if len(filternames) == 17 :
+            colors = ['hotpink', 'violet', 'mediumorchid', 'darkviolet',
+                      'darkslateblue', 'royalblue', 'dodgerblue',
+                      'deepskyblue', 'cyan', 'springgreen', 'lime',
+                      'greenyellow', 'yellow', 'gold', 'darkorange',
+                      'orangered', 'red']
+        
+        xs = table['sma']/table['R_e']
+        x_max = (max(xs) + 1)
+        
+        ys = []
+        for i in range(len(flux_columns)) :
+            maggies_per_pix = list(table[flux_columns[i]]/3631/table[nPix_columns[i]])
+            ys.append(maggies_per_pix)
+        
+        x_label = r'Radius ($R_{\rm e}$)'
+        y_label = r'Spatial Flux Density (maggies pixel$^{-1}$)'
+        
+        plt.plot_sed(xs, ys, filternames, colors, outfile,
+                     xlabel=x_label, ylabel=y_label, xmax=x_max, save=True)
+    
+    return
+
+# check_all_bins(plot=True, use_saved=True)
+
+# check_total_flux('f160w')
+
+

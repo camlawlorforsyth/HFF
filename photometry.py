@@ -80,37 +80,55 @@ def determine_fluxes(cluster, filters) :
                 noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
                 segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
                 
-                # make a copy of the science image based on the segmentation map
+                # make a copy of the science image and noise image
                 ID = int(IDs[i])
                 new_sci = sci.copy()
-                new_sci[(segMap > 0) & (segMap != ID)] = 0 # don't mask out the sky
-                
-                # and for the noise image as well
                 new_noise = noise.copy()
-                new_noise[(segMap > 0) & (segMap != ID)] = 0
                 
-                lumDist = cosmo.luminosity_distance(redshift)
+                # mask the copied images based on the segmentation map, but
+                # don't mask out the sky
+                if ID >= 20000 : # the bCGs aren't in the segmap, so mask
+                    new_sci[segMap > 0] = 0 # any other galaxy
+                    new_noise[segMap > 0] = 0
+                else : # for the non-bCGs, mask out pixels associated with
+                    new_sci[(segMap > 0) & (segMap != ID)] = 0 # other galaxies
+                    new_noise[(segMap > 0) & (segMap != ID)] = 0
                 
                 # save relevant information for running prospector into the table
                 length = len(range(int(numBins)))
                 photometry['R_e'] = [r_e]*length*u.pix
                 photometry['z'] = [redshift]*length
+                lumDist = cosmo.luminosity_distance(redshift)
                 photometry['lumDist'] = [lumDist.value]*length*u.Mpc
                 
-                fluxes, uncerts = [], []
+                fluxes, uncerts, invalid = [], [], []
                 for val in range(int(numBins)) :
-                    mask = np.where(bins_image == val)
+                    # mask = np.where(bins_image == val)
+                    temp_sci, temp_noise = new_sci.copy(), new_noise.copy()
                     
-                    masked_sci = new_sci[mask]
-                    flux = photfnu*np.nansum(masked_sci)
+                    # masked_sci = new_sci[mask]
+                    # flux = photfnu*np.nansum(masked_sci)
+                    temp_sci[bins_image != val] = np.nan
+                    flux = photfnu*np.nansum(temp_sci)
                     fluxes.append(flux)
                     
-                    masked_noise = new_noise[mask]
-                    uncert = photfnu*np.sqrt(np.nansum(np.square(masked_noise)))
+                    # masked_noise = new_noise[mask]
+                    # uncert = photfnu*np.sqrt(np.nansum(np.square(masked_noise)))
+                    temp_noise[bins_image != val] = np.nan
+                    uncert = photfnu*np.sqrt(np.nansum(np.square(temp_noise)))
                     uncerts.append(uncert)
+                    
+                    pix_sci = temp_sci.copy()
+                    pix_sci[pix_sci != 0] = np.nan
+                    pix_sci[pix_sci == 0] = 1
+                    invalid_pix = np.nansum(pix_sci)
+                    invalid.append(invalid_pix)
                 
                 photometry[filt + '_flux'] = fluxes*u.Jy
                 photometry[filt + '_err'] = uncerts*u.Jy
+                
+                valid = nPixels - np.array(invalid)
+                photometry[filt + '_nPix'] = np.int_(valid)
             
             photometry.write(outfile)
     
