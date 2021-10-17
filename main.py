@@ -120,6 +120,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     # START
     
     population = 'Q' # only consider quiescent galaxies
+    subpop = 'non-bCG' # only consider the non bCG quiescent galaxies
     
     # ensure the output directory is available
     os.makedirs('{}'.format(cluster), exist_ok=True) 
@@ -164,7 +165,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     # now visually inspect all the cutouts to ensure the final objects are
     # reasonable and have no glaring issues, saving issues to
     # `cluster`_issues.csv. Then combine the issues file with the objects file
-    # field.combine_final_issues(cluster)
+    field.combine_with_issues(cluster)
     
     # now bin the cutouts for each galaxy and save the resulting files
     if vorbin :
@@ -176,7 +177,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     # then determine the flux for every bin for each galaxy, saving the
     # photometry for each galaxy into a separate file
-    photometry.determine_fluxes(cluster, filters)
+    photometry.determine_fluxes(cluster, filters, subpop)
     if verbose :
         print('Saved photometries to fits files.')
     

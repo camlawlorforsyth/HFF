@@ -1,4 +1,5 @@
 
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -52,7 +53,7 @@ def display_annuli(data, xy, rins, eta, theta, bad='black', cbar_label='',
     plt.clf()
     ax = fig.add_subplot(111)
     
-    cmap = cmap
+    cmap = copy.copy(cmap)
     cmap.set_bad(bad, 1)
     
     frame = ax.imshow(data, origin='lower', cmap=cmap, norm=norm,
@@ -107,7 +108,7 @@ def display_cutouts(cutout_data, nrows, ncols, filters, flags, outfile,
     position = range(1, len(cutout_data) + 1)
     
     # old version
-    # cmap = cm.inferno
+    # cmap = copy.copy(cm.inferno)
     # cmap.set_bad('white', 1)
     # cmap.set_under('white', 1)
     
@@ -203,7 +204,7 @@ def display_image_with_wcs(data, wcs, vmin=None, vmax=None) :
     ax.coords[0].set_axislabel('Right Ascension')
     ax.coords[1].set_axislabel('Declination')
     
-    cmap = cm.gray
+    cmap = copy.copy(cm.gray)
     cmap.set_bad('black', 1)
     
     frame = ax.imshow(data, origin='lower', norm=LogNorm(), cmap=cmap,
@@ -246,7 +247,7 @@ def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray,
     plt.clf()
     ax = fig.add_subplot(111)
     
-    cmap = cmap
+    cmap = copy.copy(cmap)
     cmap.set_bad(bad, 1)
     
     frame = ax.imshow(data, origin='lower', cmap=cmap, norm=norm,

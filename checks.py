@@ -236,17 +236,20 @@ def check_total_flux(filt) :
     
     return
 
-def concatenate_all(both=False) :
+def concatenate_all(both=False, save=False) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
     all_clusters_list = []
     
     for cluster in clusters :
-        cluster_table = Table.read('{}/{}_final_objects.fits'.format(
-            cluster, cluster))
+        # infile = '{}/{}_final_objects.fits'.format(cluster, cluster)
+        infile = '{}/{}_non-bCG_QGs.fits'.format(cluster, cluster)
+        cluster_table = Table.read(infile)
         cluster_table['cluster'] = cluster
         all_clusters_list.append(cluster_table)
     all_clusters = vstack(all_clusters_list)
+    if save :
+        all_clusters.write('all_clusters.fits')
     
     if both :
         all_parallels_list = []
@@ -256,6 +259,8 @@ def concatenate_all(both=False) :
             parallel_table['field'] = '{}par'.format(cluster)
             all_parallels_list.append(parallel_table)
         all_parallels = vstack(all_parallels_list)
+        if save :
+            all_parallels.write('all_parallels.fits')
         return all_clusters, all_parallels
     else :
         return all_clusters

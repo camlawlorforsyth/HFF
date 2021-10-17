@@ -30,7 +30,7 @@ def combine_with_issues(cluster) :
     combined = join(sci_objs, issues, keys='id')
     
     combined = combined[combined['id'] < 20000]
-    combined.write('{}/{}_nonbCG_QGs.fits'.format(cluster, cluster))
+    combined.write('{}/{}_non-bCG_QGs.fits'.format(cluster, cluster))
     
     return
 
