@@ -1,6 +1,5 @@
 
 import os
-import glob
 import numpy as np
 
 from astropy.cosmology import FlatLambdaCDM
@@ -11,11 +10,11 @@ from core import open_cutout
 
 cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
-def determine_fluxes(cluster, filters) :
+def determine_fluxes(cluster, filters, subpop='non-bCG') :
     '''
-    Determine the flux in every Voronoi bin for a given object for a given
+    Determine the flux in every annulus/bin for a given object for a given
     filter. Then move to the next subsequent filter and determine the fluxes
-    in the corresponding Voronoi bins for that filter. Repeat for all filters.
+    in the corresponding bins for that filter. Repeat for all filters.
     Create a table which includes all determined fluxes. Save table to file
     for subsequent use with Prospector.
     
@@ -32,25 +31,27 @@ def determine_fluxes(cluster, filters) :
     
     '''
     
-    binDir = '{}/bins'.format(cluster)
-    cutoutDir = '{}/cutouts'.format(cluster)
-    outDir = '{}/photometry'.format(cluster)
+    if subpop == 'non-bCG' :
+        use_table = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
+                                                               cluster))
     
-    bin_paths = '{}/{}_ID_*_annuli.npz'.format(binDir, cluster)
-    bin_file_list = glob.glob(bin_paths) # get all bin numpy files
-    bin_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
-    for file in bin_file_list :
-        file = file.replace(os.sep, '/')
-        bin_files.append(file)
-        IDs.append(file.split('_')[2])
+    use_columns = [col for col in use_table.colnames if col.endswith('_use')]
+    IDs = use_table['id']
     
-    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the
+    os.makedirs('{}/photometry'.format(cluster), exist_ok=True) # ensure the
         # output directory for the photometric tables is available
     
-    for i in range(len(bin_files)) :
-        outfile = '{}/{}_ID_{}_photometry.fits'.format(outDir, cluster, IDs[i])
+    for ID in IDs :
+        row = np.where(IDs == ID)
+        use_vals = (np.array(list(use_table[use_columns][row][0])) == 'TRUE')
         
-        bin_data = np.load(bin_files[i])
+        use_dict = dict(zip(use_columns, use_vals))
+        
+        outfile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                  cluster, ID)
+        
+        bin_data = np.load('{}/bins/{}_ID_{}_annuli.npz'.format(cluster,
+                                                                cluster, ID))
         bins_image = bin_data['image']
         sma, smb = bin_data['sma'], bin_data['smb']
         flux, err = bin_data['flux'], bin_data['err']
@@ -68,12 +69,15 @@ def determine_fluxes(cluster, filters) :
             photometry['width'], photometry['PA'] = widths, PAs
             
             for filt in filters :
-                sci_file = '{}/{}_ID_{}_{}.fits'.format(cutoutDir, cluster, IDs[i],
-                                                        filt)
-                noise_file = '{}/{}_ID_{}_{}_noise.fits'.format(cutoutDir, cluster,
-                                                                IDs[i], filt)
-                segmap_file = '{}/{}_ID_{}_segmap.fits'.format(cutoutDir, cluster,
-                                                               IDs[i])
+                sci_file = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster,
+                                                                cluster, ID,
+                                                                filt)
+                noise_file = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(cluster,
+                                                                        cluster,
+                                                                        ID, filt)
+                segmap_file = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster,
+                                                                       cluster,
+                                                                       ID)
                 
                 (sci, dim, photfnu, r_e,
                  redshift, sma, smb, pa) = open_cutout(sci_file)
@@ -81,7 +85,6 @@ def determine_fluxes(cluster, filters) :
                 segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
                 
                 # make a copy of the science image and noise image
-                ID = int(IDs[i])
                 new_sci = sci.copy()
                 new_noise = noise.copy()
                 
@@ -129,6 +132,10 @@ def determine_fluxes(cluster, filters) :
                 
                 valid = nPixels - np.array(invalid)
                 photometry[filt + '_nPix'] = np.int_(valid)
+                
+                for key, value in use_dict.items() :
+                    if filt in key.split('_')[0] :
+                        photometry[key] = [value]*length
             
             photometry.write(outfile)
     
