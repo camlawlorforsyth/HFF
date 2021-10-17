@@ -158,9 +158,8 @@ dmypy.json
 *README
 
 # generated files
-*.csv
+*_throughput*.csv
 *.npz
-*.par
 *.png
 *.reg
 *.txt
