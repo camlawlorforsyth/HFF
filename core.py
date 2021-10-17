@@ -13,14 +13,14 @@ def build_par_file_WFC3(filt, wave, throughput) :
     
     # sedpy needs evenly spaced wavelength arrays and corresponding throughputs
     interpolated = interpolate.interp1d(wave, throughput)
-    start, end = wave[0], wave[-1]
     
     # evenly sample the wavelengths and use interpolated throughput values
-    wave_new = np.arange(start, end+1, 1)
-    throughput_new = interpolated(wave_new)
+    sampling_waves = np.arange(wave[0], wave[-1]+1, 1)
+    interpolated_throughput = interpolated(sampling_waves)
     
     # write the corresponding tables
-    par_table = Table([wave_new, throughput_new], names=('wave', 'thru'))
+    par_table = Table([sampling_waves, interpolated_throughput],
+                      names=('wave', 'thru'))
     par_table.write('hff_filters/hff_{}.par'.format(filt),
                     format='ascii.no_header', overwrite=False)
     
@@ -40,18 +40,8 @@ def build_par_file_ACS(table) :
         throughput = table[cols[i+1]]
         throughput = np.array(throughput[throughput > 0])
         
-        # pad the wavelength arrays and throughputs with leading/trailing zeros
-        wave_front = np.arange(wave[0]-100, wave[0], 1)
-        wave_end = np.arange(wave[-1], wave[-1]+100, 1)
-        zeros_front = np.zeros(wave_front.shape)
-        zeros_end = np.zeros(wave_end.shape)
-        
-        # create final arrays
-        wave = np.concatenate([wave_front, wave, wave_end])
-        throughput = np.concatenate([zeros_front, throughput, zeros_end])
-        
         # interpolate values and write files
-        build_par_file_WFC3(filt, np.float64(wave), throughput)
+        build_par_file_WFC3(filt, np.float64(wave), np.float64(throughput))
     
     return
 
@@ -76,12 +66,15 @@ def build_filter_table(save_par=False, display=False, write=False) :
     
     '''
     
-    filters = os.listdir('hst_filters/')
+    if save_par :
+        os.makedirs('hff_filters', exist_ok=True) # ensure the output directory
+        # for the filter throughput files is available
     
     # HST WFC3/UVIS (Wide Field Camera 3 - UV/Visible channel)
     # F225W, F275W, F336W, F390W
     # (UV wide, UV wide, U/Stromgren u, Washington C)
-    UVIS = filters[6:]
+    UVIS = ['f225w_UVIS_throughput.csv', 'f275w_UVIS_throughput.csv',
+            'f336w_UVIS_throughput.csv', 'f390w_UVIS_throughput.csv']
     UVIS_tables = []
     for file in UVIS :
         table = Table.read('hst_filters/{}'.format(file), format='csv')
@@ -103,15 +96,16 @@ def build_filter_table(save_par=False, display=False, write=False) :
     # HST ACS/WFC (Advanced Camera for Surveys - Wide Field Channel)
     # F435W, F475W, F555W, F606W, F625W, F775W, F814W, F850LP
     # (Johnson B, SDSS g, Johnson V, Broad V, SDSS r, SDSS i, Broad I, SDSS z)
-    ACS = filters[0]
-    ACS_table = Table.read('hst_filters/{}'.format(ACS), format='csv')
+    ACS_table = Table.read('hst_filters/ACS_WFC_throughputs.csv', format='csv')
     if save_par :
         build_par_file_ACS(ACS_table)
     
     # HST WFC3/IR (Wide Field Camera 3 - near-IR channel)
     # F105W, F110W, F125W, F140W, F160W
     # (wide Y, wide YJ, wide J, wide JH gap, H)
-    IR = filters[1:6]
+    IR = ['f105w_IR_throughput.csv', 'f110w_IR_throughput.csv',
+          'f125w_IR_throughput.csv', 'f140w_IR_throughput.csv',
+          'f160w_IR_throughput.csv']
     IR_tables = []
     for file in IR :
         table = Table.read('hst_filters/{}'.format(file), format='csv')
