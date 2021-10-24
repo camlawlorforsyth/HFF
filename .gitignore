@@ -163,3 +163,4 @@ dmypy.json
 *.png
 *.reg
 *.txt
+*.h5

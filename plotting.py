@@ -8,6 +8,8 @@ import matplotlib.colors as clrs
 from matplotlib.colors import LogNorm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+import prospect.io.read_results as reader
+
 currentFig = 1
 
 def display_annuli(data, xy, rins, eta, theta, bad='black', cbar_label='',
@@ -438,6 +440,17 @@ def hst_transmission_curves(table, plot=True) :
     
     return
 
+def plot_chains(result, results_type='dynesty') :
+    
+    if results_type == 'emcee' :
+        chosen = np.random.choice(result['run_params']['nwalkers'], size=10,
+                                  replace=False)
+        tracefig = reader.traceplot(result, figsize=(11, 6), chains=chosen)
+    else :
+        tracefig = reader.traceplot(result, figsize=(11, 6))
+    
+    return
+
 def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
                           alphas, contour_xs, contour_ys, contour_zs, version,
                           xlabel=None, ylabel=None, plot_divider=True,
@@ -521,6 +534,36 @@ def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
     
     plt.tight_layout()
     plt.show()
+    
+    return
+
+def plot_corner(model, result, theta_best, results_type='dynesty',
+                outfile=None, save=False, verbose=False) :
+    
+    imax = np.argmax(result['lnprobability'])
+    npar = model.ndim
+    
+    if results_type == 'emcee' :
+        i, j = np.unravel_index(imax, result['lnprobability'].shape)
+        theta_max = result['chain'][i, j, :].copy()
+        thin = 5
+    else :
+        theta_max = result['chain'][imax, :]
+        thin = 1
+    
+    if verbose :
+        print('Optimization value: {}'.format(theta_best))
+        print('MAP value: {}'.format(theta_max))
+    
+    cornerfig = reader.subcorner(result, start=0, thin=thin,
+                                 fig=plt.subplots(npar, npar,
+                                    figsize=(1.5*npar, 1.5*npar))[0])
+    
+    if save :
+        cornerfig.savefig(outfile)
+        cornerfig.close()
+    else :
+        cornerfig.show()
     
     return
 
@@ -652,6 +695,210 @@ def plot_sed(xs, list_of_ys, labels, colors, outfile, xlabel=None, ylabel=None,
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=8)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
+def plot_sed_alone(obs) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(16, 9))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    waves, mask = obs['phot_wave'], obs['phot_mask']
+    fluxes, e_fluxes = obs['maggies'], obs['maggies_unc']
+    
+    xmin, xmax = np.min(waves)*0.8, np.max(waves)/0.8
+    ymin, ymax = np.max([np.min(fluxes), 1e-15])*0.8, np.max(fluxes)/0.4
+    
+    ax.plot(waves, fluxes, label='all observed photometry',
+            marker='o', markersize=12, alpha=0.8, ls='', lw=3,
+            color='slateblue')
+    
+    ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
+                label='photometry to fit', marker='o', markersize=8, alpha=0.8,
+                ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
+    
+    for filt in obs['filters'] :
+        wave, trans = filt.wavelength.copy(), filt.transmission.copy()
+        trans = trans / trans.max()
+        trans = 10**(0.2*(np.log10(ymax/ymin)))*trans*ymin
+        ax.loglog(wave, trans, lw=3, color='gray', alpha=0.7)
+    
+    ax.set(xscale='log', yscale='log', xlim=(xmin, xmax), ylim=(ymin, ymax))
+    ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)
+    ax.set_ylabel('Flux Density (maggies)', fontsize=15)
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_sed_and_model(obs, model, init_phot, init_spec, sps) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(16, 9))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    waves, mask = obs['phot_wave'], obs['phot_mask']
+    fluxes, e_fluxes = obs['maggies'], obs['maggies_unc']
+    
+    xmin, xmax = np.min(waves)*0.8, np.max(waves)/0.8
+    ymin, ymax = np.max([np.min(fluxes), 1e-15])*0.8, np.max(fluxes)/0.4
+    
+    ax.plot(waves, fluxes, label='all observed photometry',
+            marker='o', markersize=12, alpha=0.8, ls='', lw=3,
+            color='slateblue')
+    
+    ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
+                label='photometry to fit', marker='o', markersize=8, alpha=0.8,
+                ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
+    
+    ax.plot(waves, init_phot, label='initial model photometry',
+            marker='s', markersize=10, alpha=0.6, ls='', lw=3, mfc='none',
+            mec='gray', mew=3)
+    
+    model_waves = sps.wavelengths*(1.0 + model.params.get('zred', 0.0))
+    ax.plot(model_waves, init_spec, label='model spectrum', lw=0.7,
+            color='navy', alpha=0.7)
+    
+    ax.set(xscale='log', yscale='log')
+    ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)
+    ax.set_ylabel('Flux Density (maggies)', fontsize=15)
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_sed_and_models(obs, model, init_phot, init_spec, opt_phot, opt_spec,
+                        sps) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(16, 9))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    waves, mask = obs['phot_wave'], obs['phot_mask']
+    fluxes, e_fluxes = obs['maggies'], obs['maggies_unc']
+    
+    xmin, xmax = np.min(waves)*0.8, np.max(waves)/0.8
+    ymin, ymax = np.max([np.min(fluxes), 1e-15])*0.8, np.max(fluxes)/0.4
+    
+    ax.plot(waves, fluxes, label='all observed photometry',
+            marker='o', markersize=12, alpha=0.8, ls='', lw=3,
+            color='slateblue')
+    
+    ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
+                label='photometry to fit', marker='o', markersize=8, alpha=0.8,
+                ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
+    
+    ax.plot(waves, init_phot, label='initial model photometry',
+            marker='s', markersize=10, alpha=0.6, ls='', lw=3, mfc='none',
+            mec='gray', mew=3)
+    
+    ax.plot(waves, opt_phot, label='optimized model photometry',
+            marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
+            mec='c', mew=3)
+    
+    model_waves = sps.wavelengths*(1.0 + model.params.get('zred', 0.0))
+    ax.plot(model_waves, init_spec, label='initial model spectrum', lw=0.7,
+            color='navy', alpha=0.7)
+    
+    ax.plot(model_waves, opt_spec, label='optimized model spectrum', lw=0.7,
+            color='c', alpha=1)
+    
+    ax.set(xscale='log', yscale='log')
+    ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)
+    ax.set_ylabel('Flux Density (maggies)', fontsize=15)
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_sed_from_fit(obs, model, result, sps, infile, lo=None, hi=None,
+                      results_type='dynesty', outfile=None, save=False) :
+    
+    imax = np.argmax(result['lnprobability'])
+    if results_type == 'emcee' :
+        i, j = np.unravel_index(imax, result['lnprobability'].shape)
+        theta_max = result['chain'][i, j, :].copy()
+    else :
+        theta_max = result['chain'][imax, :]
+    
+    # randint = np.random.randint
+    # if results_type == 'emcee' :
+    #     nwalkers, niter = result['run_params']['nwalkers'], result['run_params']['niter']
+    #     theta = result['chain'][randint(nwalkers), randint(niter)]
+    # else :
+    #     theta = result['chain'][randint(len(result['chain']))]
+    
+    '''
+    basic = infile[:-3]
+    mapfile = '{}_map.npz'.format(basic)
+    if os.path.isfile(mapfile) :
+        mapfilenpz = np.load(mapfile)
+        map_spec, map_phot = mapfilenpz['map_spec'], mapfilenpz['map_phot']
+    else :
+        map_spec, map_phot, _ = model.mean_model(theta_max, obs, sps=sps)
+        np.savez(mapfile, map_spec=map_spec, map_phot=map_phot)
+    '''
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(16, 9))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    waves, mask = obs['phot_wave'], obs['phot_mask']
+    fluxes, e_fluxes = obs['maggies'], obs['maggies_unc']
+    
+    xmin, xmax = np.min(waves)*0.8, np.max(waves)/0.8
+    ymin, ymax = np.max([np.min(fluxes), 1e-15])*0.8, np.max(fluxes)/0.4
+    
+    ax.plot(waves, fluxes, label='all observed photometry',
+            marker='o', markersize=12, alpha=0.8, ls='', lw=3,
+            color='slateblue')
+    
+    ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
+                label='photometry to fit', marker='o', markersize=8, alpha=0.8,
+                ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
+    
+    # ax.plot(waves, map_phot, label='MAP model photometry',
+    #         marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
+    #         mec='r', mew=3)
+    
+    model_waves = sps.wavelengths*(1.0 + model.params.get('zred', 0.0))
+    
+    # ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
+    #         color='navy', alpha=0.7)
+    
+    ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
+    
+    ax.set(xscale='log', yscale='log', xlim=(xmin, xmax), ylim=(ymin, ymax))
+    ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)
+    ax.set_ylabel('Flux Density (maggies)', fontsize=15)
+    ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
     
     plt.tight_layout()
     
