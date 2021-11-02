@@ -265,7 +265,15 @@ def concatenate_all(both=False, save=False) :
     else :
         return all_clusters
 
-def plot_all_FUVVJ() :
+def load_FUVVJ_contours(infile='FUVVJ_contours.npz') :
+    
+    with np.load(infile) as data :
+        q_xi, q_yi, q_z = data['q_xi'], data['q_yi'], data['q_z']
+        sf_xi, sf_yi, sf_z = data['sf_xi'], data['sf_yi'], data['sf_z']
+    
+    return q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z
+
+def plot_all_FUVVJ(plot=True, save_contours=False) :
     
     all_clusters, all_parallels = concatenate_all(both=True)
     
@@ -312,18 +320,25 @@ def plot_all_FUVVJ() :
     sf_zi = sf_k(np.vstack([sf_xi.flatten(), sf_yi.flatten()]))
     sf_z = sf_zi.reshape(sf_xi.shape)
     
-    plt.plot_colorcolor_multi(xs, ys,
-                              ['Cluster QGs', 'Cluster SFGs',
-                               'Field QGs', 'Field SFGs'],
-                              [cluster_q_len, cluster_sf_len,
-                               field_q_len, field_sf_len],
-                              ['darkred', 'darkblue', 'r', 'dodgerblue'],
-                              ['s', 's', 'o', 'o'], [19, 19, 15, 15],
-                              [0.6, 0.6, 0.5, 0.5],
-                              [q_xi, sf_xi], [q_yi, sf_yi], [q_z, sf_z],
-                              version='FUVVJ',
-                              xlabel=r'V$-$J', ylabel=r'FUV$-$V',
-                              xmin=0, xmax=2.1, ymin=0, ymax=8.4, loc=2)
+    if plot :
+        plt.plot_colorcolor_multi(xs, ys,
+                                  ['Cluster QGs', 'Cluster SFGs',
+                                   'Field QGs', 'Field SFGs'],
+                                  [cluster_q_len, cluster_sf_len,
+                                   field_q_len, field_sf_len],
+                                  ['darkred', 'darkblue', 'r', 'dodgerblue'],
+                                  ['s', 's', 'o', 'o'], [19, 19, 15, 15],
+                                  [0.6, 0.6, 0.5, 0.5],
+                                  [q_xi, sf_xi], [q_yi, sf_yi], [q_z, sf_z],
+                                  version='FUVVJ',
+                                  xlabel=r'V$-$J', ylabel=r'FUV$-$V',
+                                  xmin=0, xmax=2.1, ymin=0, ymax=8.4, loc=2)
+    
+    if save_contours :
+        np.savez('FUVVJ_contours.npz', q_xi=q_xi, q_yi=q_yi, q_z=q_z,
+                 sf_xi=sf_xi, sf_yi=sf_yi, sf_z=sf_z)
+    
+    return
 
 def plot_all_UVJ() :
     

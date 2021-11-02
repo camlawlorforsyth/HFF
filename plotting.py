@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from matplotlib import cm
-import matplotlib.colors as clrs
 from matplotlib.colors import LogNorm
+import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import prospect.io.read_results as reader
@@ -567,6 +567,89 @@ def plot_corner(model, result, theta_best, results_type='dynesty',
     
     return
 
+def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
+                      list_of_ys, list_of_yerrs_lo, list_of_yerrs_hi,
+                      list_of_best_ys, 
+                      q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z, V_J, FUV_V,
+                      labels='', xlabel=None, list_of_ylabels=None, title=None,
+                      xmin=None, xmax=None, outfile=None, loc='upper right',
+                      figsizewidth=16, figsizeheight=9, save=False) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    
+    spec = gridspec.GridSpec(ncols=2, nrows=3, figure=fig, width_ratios=[2, 1])
+    
+    ax1 = fig.add_subplot(spec[0, 0])
+    ax2 = fig.add_subplot(spec[1, 0], sharex=ax1)
+    ax3 = fig.add_subplot(spec[2, 0], sharex=ax1)
+    ax4 = fig.add_subplot(spec[0:2, 1])
+    
+    ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkblue',
+             label=labels[0])
+    ax1.errorbar(list_of_xs[0], list_of_ys[0],
+                 xerr=(list_of_xerrs_lo[0], list_of_xerrs_hi[0]),
+                 yerr=(list_of_yerrs_lo[0], list_of_yerrs_hi[0]),
+                 color='blue', ecolor='k', elinewidth=0.7, linestyle='-',
+                 marker='.', markeredgecolor='k', markerfacecolor='k',
+                 markersize=11, label=labels[1], zorder=3)
+    ax1.set_ylabel(list_of_ylabels[0], fontsize=15)
+    ax1.tick_params(axis='x', which='major', labelbottom=False)
+    
+    ax2.plot(list_of_xs[1], list_of_best_ys[1], '--', color='darkred')
+    ax2.errorbar(list_of_xs[1], list_of_ys[1],
+                 xerr=(list_of_xerrs_lo[1], list_of_xerrs_hi[1]),
+                 yerr=(list_of_yerrs_lo[1], list_of_yerrs_hi[1]),
+                 color='red', ecolor='k', elinewidth=0.7, linestyle='-',
+                 marker='.', markeredgecolor='k', markerfacecolor='k',
+                 markersize=11, zorder=3)
+    ax2.set_ylabel(list_of_ylabels[1], fontsize=15)
+    ax2.tick_params(axis='x', which='major', labelbottom=False)
+    
+    ax3.plot(list_of_xs[2], list_of_best_ys[2], '--', color='darkgrey')
+    ax3.errorbar(list_of_xs[2], list_of_ys[2],
+                 xerr=(list_of_xerrs_lo[2], list_of_xerrs_hi[2]),
+                 yerr=(list_of_yerrs_lo[2], list_of_yerrs_hi[2]),
+                 color='grey', ecolor='k', elinewidth=0.7, linestyle='-',
+                 marker='.', markeredgecolor='k', markerfacecolor='k',
+                 markersize=11, zorder=3)
+    ax3.set_ylabel(list_of_ylabels[2], fontsize=15)
+    ax3.set_xlabel(xlabel, fontsize=15)
+    
+    # location on the FUVVJ diagram
+    ax4.contour(q_xi, q_yi, q_z, colors='darkred', alpha=0.2, zorder=2)
+    ax4.contour(sf_xi, sf_yi, sf_z, colors='darkblue', alpha=0.2, zorder=2)
+    ax4.set_xlabel(r'V$-$J')
+    ax4.set_ylabel(r'FUV$-$V')
+    ax4.set_xlim(0, 2.1)
+    ax4.set_ylim(0, 8.4)
+    ax4.plot(V_J, FUV_V, marker='o', markerfacecolor='red',
+             markeredgecolor='k', markersize=9)
+    slope, intercept, horiz, vert = 3.24, 0.32, 3.45, 1.56
+    first_knee, second_knee = (horiz - intercept)/slope, vert
+    divide_x = np.linspace(first_knee, second_knee, 1000)
+    divide_y = slope*divide_x + intercept
+    ax4.hlines(horiz, xmin, first_knee, ls='-', color='k', zorder=5)
+    ax4.plot(divide_x, divide_y, 'k-', zorder=5)
+    ax4.vlines(vert, slope*second_knee + intercept, 8.4,
+               ls='-', color='k', zorder=5)
+    
+    ax1.set_title(title, fontsize=18)
+    ax1.set_xlim(xmin, xmax)
+    ax1.legend(loc=loc, facecolor='whitesmoke', framealpha=1, fontsize=11)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
 def plot_objects(array_of_xs, array_of_ys, redshift, labels, markers, colors,
                  sizes, alphas, redshift_tol_lo=0.05, redshift_tol_hi=0.05,
                  xlabel=None, ylabel=None, title=None,
@@ -892,7 +975,7 @@ def plot_sed_from_fit(obs, model, result, sps, infile, lo=None, hi=None,
     # ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
     #         color='navy', alpha=0.7)
     
-    ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
+    # ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
     
     ax.set(xscale='log', yscale='log', xlim=(xmin, xmax), ylim=(ymin, ymax))
     ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)

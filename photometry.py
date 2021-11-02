@@ -60,6 +60,9 @@ def determine_fluxes(cluster, filters, subpop='non-bCG') :
         
         numBins = np.nanmax(bins_image) + 1 # accounts for python 0-index
         
+        FUV_mag, U_mag = use_table['M_AB_FUV'][row], use_table['M_AB_U'][row]
+        V_mag, J_mag = use_table['M_AB_V'][row], use_table['M_AB_J'][row]
+        
         if not np.isnan(numBins) :
             photometry = Table()
             photometry['bin'] = range(int(numBins))
@@ -67,6 +70,11 @@ def determine_fluxes(cluster, filters, subpop='non-bCG') :
             photometry['flux'], photometry['err'] = flux, err
             photometry['SN'], photometry['nPixels'] = flux/err, nPixels
             photometry['width'], photometry['PA'] = widths, PAs
+            
+            photometry['FUV_mag'] = [FUV_mag]*int(numBins)
+            photometry['U_mag'] = [U_mag]*int(numBins)
+            photometry['V_mag'] = [V_mag]*int(numBins)
+            photometry['J_mag'] = [J_mag]*int(numBins)
             
             for filt in filters :
                 sci_file = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster,
