@@ -3,6 +3,7 @@ import copy
 import numpy as np
 import matplotlib.pyplot as plt
 
+import corner
 from matplotlib import cm
 from matplotlib.colors import LogNorm
 import matplotlib.gridspec as gridspec
@@ -537,42 +538,37 @@ def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
     
     return
 
-def plot_corner(model, result, theta_best, results_type='dynesty',
-                outfile=None, save=False, verbose=False) :
+def plot_corner(samples, labels, npar, result, ranges=None,
+                figsizewidth=9, figsizeheight=9, outfile=None, save=False) :
     
-    imax = np.argmax(result['lnprobability'])
-    npar = model.ndim
+    '''
+    cornerfig = reader.subcorner(result, start=0, thin=1,
+                                  fig=plt.subplots(npar, npar,
+                                    figsize=(1.5*npar, 1.5*npar))[0],
+                                      range=ranges)
+    '''
     
-    if results_type == 'emcee' :
-        i, j = np.unravel_index(imax, result['lnprobability'].shape)
-        theta_max = result['chain'][i, j, :].copy()
-        thin = 5
-    else :
-        theta_max = result['chain'][imax, :]
-        thin = 1
-    
-    if verbose :
-        print('Optimization value: {}'.format(theta_best))
-        print('MAP value: {}'.format(theta_max))
-    
-    cornerfig = reader.subcorner(result, start=0, thin=thin,
-                                 fig=plt.subplots(npar, npar,
-                                    figsize=(1.5*npar, 1.5*npar))[0])
+    cornerfig = corner.corner(samples, labels=labels, range=ranges,
+                              fig=plt.subplots(npar, npar,
+                                               figsize=(2*npar, 2*npar))[0],
+                              fill_contours=True, plot_datapoints=False,
+                              plot_density=False, quantiles=[0.16, 0.5, 0.84],
+                              show_titles=True)
     
     if save :
-        cornerfig.savefig(outfile)
-        cornerfig.close()
+        plt.savefig(outfile)
+        plt.close()
     else :
-        cornerfig.show()
+        plt.show()
     
     return
 
 def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
                       list_of_ys, list_of_yerrs_lo, list_of_yerrs_hi,
-                      list_of_best_ys, 
+                      list_of_best_ys, list_of_slopes, list_of_intercepts,
                       q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z, V_J, FUV_V,
                       labels='', xlabel=None, list_of_ylabels=None, title=None,
-                      xmin=None, xmax=None, outfile=None, loc='upper right',
+                      xmin=None, xmax=None, outfile=None, loc='best',
                       figsizewidth=16, figsizeheight=9, save=False) :
     
     global currentFig
@@ -582,33 +578,40 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     
     spec = gridspec.GridSpec(ncols=2, nrows=3, figure=fig, width_ratios=[2, 1])
     
+    xs = np.linspace(xmin, xmax, 1000)
+    
     ax1 = fig.add_subplot(spec[0, 0])
     ax2 = fig.add_subplot(spec[1, 0], sharex=ax1)
     ax3 = fig.add_subplot(spec[2, 0], sharex=ax1)
     ax4 = fig.add_subplot(spec[0:2, 1])
     
-    ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkblue',
+    ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkred',
              label=labels[0])
+    ax1.plot(xs, list_of_slopes[0]*xs + list_of_intercepts[0], ':',
+             color='maroon', label=labels[1])
     ax1.errorbar(list_of_xs[0], list_of_ys[0],
                  xerr=(list_of_xerrs_lo[0], list_of_xerrs_hi[0]),
                  yerr=(list_of_yerrs_lo[0], list_of_yerrs_hi[0]),
-                 color='blue', ecolor='k', elinewidth=0.7, linestyle='-',
+                 color='red', ecolor='k', elinewidth=0.7, linestyle='-',
                  marker='.', markeredgecolor='k', markerfacecolor='k',
-                 markersize=11, label=labels[1], zorder=3)
+                 markersize=11, label=labels[2], zorder=3)
     ax1.set_ylabel(list_of_ylabels[0], fontsize=15)
     ax1.tick_params(axis='x', which='major', labelbottom=False)
     
-    ax2.plot(list_of_xs[1], list_of_best_ys[1], '--', color='darkred')
+    ax2.plot(list_of_xs[1], list_of_best_ys[1], '--', color='darkblue')
+    ax2.plot(xs, list_of_slopes[1]*xs + list_of_intercepts[1], ':',
+             color='navy')
     ax2.errorbar(list_of_xs[1], list_of_ys[1],
                  xerr=(list_of_xerrs_lo[1], list_of_xerrs_hi[1]),
                  yerr=(list_of_yerrs_lo[1], list_of_yerrs_hi[1]),
-                 color='red', ecolor='k', elinewidth=0.7, linestyle='-',
+                 color='blue', ecolor='k', elinewidth=0.7, linestyle='-',
                  marker='.', markeredgecolor='k', markerfacecolor='k',
                  markersize=11, zorder=3)
     ax2.set_ylabel(list_of_ylabels[1], fontsize=15)
     ax2.tick_params(axis='x', which='major', labelbottom=False)
     
     ax3.plot(list_of_xs[2], list_of_best_ys[2], '--', color='darkgrey')
+    ax3.plot(xs, list_of_slopes[2]*xs + list_of_intercepts[2], ':', color='k')
     ax3.errorbar(list_of_xs[2], list_of_ys[2],
                  xerr=(list_of_xerrs_lo[2], list_of_xerrs_hi[2]),
                  yerr=(list_of_yerrs_lo[2], list_of_yerrs_hi[2]),
@@ -918,33 +921,9 @@ def plot_sed_and_models(obs, model, init_phot, init_spec, opt_phot, opt_spec,
     
     return
 
-def plot_sed_from_fit(obs, model, result, sps, infile, lo=None, hi=None,
-                      results_type='dynesty', outfile=None, save=False) :
-    
-    imax = np.argmax(result['lnprobability'])
-    if results_type == 'emcee' :
-        i, j = np.unravel_index(imax, result['lnprobability'].shape)
-        theta_max = result['chain'][i, j, :].copy()
-    else :
-        theta_max = result['chain'][imax, :]
-    
-    # randint = np.random.randint
-    # if results_type == 'emcee' :
-    #     nwalkers, niter = result['run_params']['nwalkers'], result['run_params']['niter']
-    #     theta = result['chain'][randint(nwalkers), randint(niter)]
-    # else :
-    #     theta = result['chain'][randint(len(result['chain']))]
-    
-    '''
-    basic = infile[:-3]
-    mapfile = '{}_map.npz'.format(basic)
-    if os.path.isfile(mapfile) :
-        mapfilenpz = np.load(mapfile)
-        map_spec, map_phot = mapfilenpz['map_spec'], mapfilenpz['map_phot']
-    else :
-        map_spec, map_phot, _ = model.mean_model(theta_max, obs, sps=sps)
-        np.savez(mapfile, map_spec=map_spec, map_phot=map_phot)
-    '''
+def plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
+                      model_waves, chisq='', lo=None, hi=None, title=None,
+                      outfile=None, save=False) :
     
     global currentFig
     fig = plt.figure(currentFig, figsize=(16, 9))
@@ -952,11 +931,12 @@ def plot_sed_from_fit(obs, model, result, sps, infile, lo=None, hi=None,
     plt.clf()
     ax = fig.add_subplot(111)
     
-    waves, mask = obs['phot_wave'], obs['phot_mask']
-    fluxes, e_fluxes = obs['maggies'], obs['maggies_unc']
-    
-    xmin, xmax = np.min(waves)*0.8, np.max(waves)/0.8
-    ymin, ymax = np.max([np.min(fluxes), 1e-15])*0.8, np.max(fluxes)/0.4
+    xmin, xmax = 0.8*np.min(waves), 1.2*np.max(waves)
+    if np.min(fluxes) < 0 :
+        ymin = 0.8*np.min(map_phot)
+    else :
+        ymin = 0.8*np.min([np.min(fluxes), np.min(map_phot)])
+    ymax = 1.2*np.max(fluxes)
     
     ax.plot(waves, fluxes, label='all observed photometry',
             marker='o', markersize=12, alpha=0.8, ls='', lw=3,
@@ -966,18 +946,21 @@ def plot_sed_from_fit(obs, model, result, sps, infile, lo=None, hi=None,
                 label='photometry to fit', marker='o', markersize=8, alpha=0.8,
                 ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
     
-    # ax.plot(waves, map_phot, label='MAP model photometry',
-    #         marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
-    #         mec='r', mew=3)
+    ax.plot(waves, map_phot, label='MAP model photometry',
+            marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
+            mec='r', mew=3)
     
-    model_waves = sps.wavelengths*(1.0 + model.params.get('zred', 0.0))
-    
-    # ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
-    #         color='navy', alpha=0.7)
+    ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
+            color='navy', alpha=0.7)
     
     # ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
     
+    ax.annotate(r'$\chi^2_{\rm reduced}$ = ' + '{:.2f}'.format(chisq),
+                (0.75, 0.25), fontsize=15, xycoords='axes fraction')
+    
     ax.set(xscale='log', yscale='log', xlim=(xmin, xmax), ylim=(ymin, ymax))
+    
+    ax.set_title(title, fontsize=18)
     ax.set_xlabel(r'Wavelength ($\rm \AA$)', fontsize=15)
     ax.set_ylabel('Flux Density (maggies)', fontsize=15)
     ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,

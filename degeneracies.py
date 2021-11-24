@@ -15,7 +15,7 @@ import plotting as plt
 
 hst_pixelscale = u.pixel_scale(0.06*u.arcsec/u.pixel)
 
-def degenerate_results(cluster, save=False) :
+def degenerate_results(cluster, ID, loc=0, save=True, version='') :
     
     if save :
         os.makedirs('{}/pngs_degen'.format(cluster), # ensure the output
@@ -32,118 +32,138 @@ def degenerate_results(cluster, save=False) :
     for file in phot_files :
         file = file.replace(os.sep, '/') # compatibility for Windows
         phots.append(file)
-    '''
-    
-    if cluster == 'a370' :
-        phots = ['a370/photometry/a370_ID_3337_photometry.fits']
-    
-    if cluster == 'a1063' :
-        phots = ['a1063/photometry/a1063_ID_1366_photometry.fits',
-                 'a1063/photometry/a1063_ID_2455_photometry.fits',
-                 'a1063/photometry/a1063_ID_3550_photometry.fits',
-                 'a1063/photometry/a1063_ID_4823_photometry.fits']
-    
-    if cluster == 'a2744' :
-        phots = ['a2744/photometry/a2744_ID_3859_photometry.fits',
-                 'a2744/photometry/a2744_ID_3964_photometry.fits',
-                 'a2744/photometry/a2744_ID_4173_photometry.fits',
-                 'a2744/photometry/a2744_ID_4369_photometry.fits',
-                 'a2744/photometry/a2744_ID_4765_photometry.fits',
-                 'a2744/photometry/a2744_ID_4862_photometry.fits',
-                 'a2744/photometry/a2744_ID_7427_photometry.fits']
-    
-    if cluster == 'm416' :
-        phots = ['m416/photometry/m416_ID_5997_photometry.fits',
-                 'm416/photometry/m416_ID_6255_photometry.fits']
-    
-    if cluster == 'm717' :
-        phots = ['m717/photometry/m717_ID_861_photometry.fits']
-    
-    if cluster == 'm1149' :
-        phots = ['m1149/photometry/m1149_ID_1967_photometry.fits',
-                 'm1149/photometry/m1149_ID_2403_photometry.fits',
-                 'm1149/photometry/m1149_ID_3531_photometry.fits',
-                 'm1149/photometry/m1149_ID_4246_photometry.fits',
-                 'm1149/photometry/m1149_ID_5095_photometry.fits']
     
     # loop over all the fits files in the directory
     for file in phots :
         ID = file.split('_')[2] # the galaxy ID to fit the bins for
-        
-        table = Table.read(file)
-        bins = table['bin'] # get a list of bin values
-        R_e = table['R_e']
-        xs = (table['sma'] - table['width']/2)/R_e
-        x_errs = (table['width']/2)/R_e
-        
-        angSize = (R_e[0]*u.pix).to(u.arcsec, hst_pixelscale)
-        physSize = angSize/cosmo.arcsec_per_kpc_comoving(table['z'][0])
-        plot_title = ('{} ID {}'.format(cluster, ID) +
-                      r' [$R_{\rm e}$' +
-                      ' = {:.3f} = {:.3f} at z = {}]'.format(angSize,
-                                                             physSize.to(u.kpc),
-                                                             table['z'][0]))
-        
-        FUV_mag = table['FUV_mag'][0]
-        V_mag = table['V_mag'][0]
-        J_mag = table['J_mag'][0]
-        
-        dusts, dusts_16, dusts_84, dust_best = [], [], [], []
-        metals, metals_16, metals_84, metal_best = [], [], [], []
-        mwas, mwa_16, mwa_84, mwa_best = [], [], [], []
-        for binNum in bins : # loop over all the bins in the table
+    '''
+    
+    file = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster, cluster,
+                                                            ID)
+    table = Table.read(file)
+    bins = table['bin'] # get a list of bin values
+    R_e = table['R_e']
+    xs = (table['sma'] - table['width']/2)/R_e
+    x_errs = (table['width']/2)/R_e
+    
+    angSize = (R_e[0]*u.pix).to(u.arcsec, hst_pixelscale)
+    physSize = angSize/cosmo.arcsec_per_kpc_comoving(table['z'][0])
+    plot_title = ('{} ID {}'.format(cluster, ID) +
+                  r' [$R_{\rm e}$' +
+                  ' = {:.3f} = {:.3f} at z = {}]'.format(angSize,
+                                                         physSize.to(u.kpc),
+                                                         table['z'][0]))
+    
+    FUV_mag = table['FUV_mag'][0]
+    V_mag = table['V_mag'][0]
+    J_mag = table['J_mag'][0]
+    
+    metals_16, metals_50, metals_84, metals_best = [], [], [], []
+    dusts_16, dusts_50, dusts_84, dusts_best = [], [], [], []
+    mwas_16, mwas_50, mwas_84, mwas_best = [], [], [], []
+    for binNum in bins : # loop over all the bins in the table
+        if (cluster == 'a370') and (ID == 3337) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'a1063') and (ID == 1366) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'a2744') and (ID == 3859) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'a2744') and (ID == 4369) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'a2744') and (ID == 7427) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'm416') and (ID == 5997) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'm1149') and (ID == 1967) and (binNum == 0) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        elif (cluster == 'm1149') and (ID == 1967) and (binNum == 1) :
+            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
+        else :
             infile = '{}/h5/ID_{}_bin_{}.h5'.format(cluster, ID, binNum)
-            result, obs, _ = reader.results_from(infile, dangerous=True)
-            zred, mass, logzsol, dust2, tage, tau = result['bestfit']['parameter']
-            
-            dust_best.append(dust2)            
-            metal_best.append(logzsol)
-            mwa_best.append(mwa_calc(tau, tage, power=1))
-            
-            # now pull samples to compute 1sigma errors
-            samples = sample_posterior(result['chain'],
-                                       weights=result['weights'])
-            
-            sample_dusts = samples[:, 3]
-            sample_metals = samples[:, 2]
-            sample_mwas = mwa_calc(samples[:, 5], samples[:, 4], power=1)
-            
-            dusts_16.append(np.percentile(sample_dusts, 16))
-            dusts.append(np.percentile(sample_dusts, 50))
-            dusts_84.append(np.percentile(sample_dusts, 84))
-            
-            metals_16.append(np.percentile(sample_metals, 16))
-            metals.append(np.percentile(sample_metals, 50))
-            metals_84.append(np.percentile(sample_metals, 84))
-            
-            mwa_16.append(np.percentile(sample_mwas, 16))
-            mwas.append(np.percentile(sample_mwas, 50))
-            mwa_84.append(np.percentile(sample_mwas, 84))
+        result, obs, _ = reader.results_from(infile, dangerous=True)
         
-        dust_lo = np.abs(dusts - np.array(dusts_16))
-        dust_hi = np.abs(np.array(dusts_84) - dusts)
+        zred, mass, logzsol, dust2, tage, tau = result['bestfit']['parameter']
+        dusts_best.append(dust2)            
+        metals_best.append(logzsol)
+        mwas_best.append(mwa_calc(tau, tage, power=1))
         
-        metal_lo = np.abs(metals - np.array(metals_16))
-        metal_hi = np.abs(np.array(metals_84) - metals)
+        # now pull samples to compute 1sigma errors
+        samples = sample_posterior(result['chain'],
+                                   weights=result['weights'])
         
-        mwa_lo = np.abs(mwas - np.array(mwa_16))
-        mwa_hi = np.abs(np.array(mwa_84) - mwas)
+        metal_16, metal_50, metal_84 = np.percentile(samples[:, 2],
+                                                     [16, 50, 84])
+        metals_16.append(metal_16)
+        metals_50.append(metal_50)
+        metals_84.append(metal_84)
         
-        outfile = '{}/pngs_degen/{}_ID_{}.pdf'.format(cluster, cluster, ID)
-        q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z = checks.load_FUVVJ_contours()
-        plt.plot_degeneracies([xs, xs, xs], [x_errs, x_errs, x_errs],
-                              [x_errs, x_errs, x_errs], [dusts, metals, mwas],
-                              [dust_lo, metal_lo, mwa_lo],
-                              [dust_hi, metal_hi, mwa_hi],
-                              [dust_best, metal_best, mwa_best],
-                              q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z,
-                              V_mag-J_mag, FUV_mag-V_mag,
-                              labels=['best fit/MAP', r'median$\pm 1\sigma$'],
-                              xlabel=r'Center of Annulus ($R_{\rm e}$)',
-                              list_of_ylabels=[r'Dust ($\tau_{\lambda, 5500 {\rm \AA}}$)',
-                                               r'$\log(Z/Z_{\odot})$',
-                                               'MWA (Gyr)'], title=plot_title,
-                              xmin=0, xmax=(xs[-1]+x_errs[-1]),
-                              outfile=outfile, save=save, loc='lower right')
+        dust_16, dust_50, dust_84 = np.percentile(samples[:, 3],
+                                                  [16, 50, 84])
+        dusts_16.append(dust_16)
+        dusts_50.append(dust_50)
+        dusts_84.append(dust_84)
+        
+        mwa_16, mwa_50, mwa_84 = np.percentile(mwa_calc(samples[:, 5],
+                                                        samples[:, 4],
+                                                        power=1),
+                                               [16, 50, 84])
+        mwas_16.append(mwa_16)
+        mwas_50.append(mwa_50)
+        mwas_84.append(mwa_84)
+    
+    metal_lo = np.abs(np.array(metals_50) - np.array(metals_16))
+    metal_hi = np.abs(np.array(metals_84) - np.array(metals_50))
+    
+    dust_lo = np.abs(np.array(dusts_50) - np.array(dusts_16))
+    dust_hi = np.abs(np.array(dusts_84) - np.array(dusts_50))
+    
+    mwa_lo = np.abs(np.array(mwas_50) - np.array(mwas_16))
+    mwa_hi = np.abs(np.array(mwas_84) - np.array(mwas_50))
+    
+    metal_slope, metal_int = np.polyfit(xs, metals_50, 1)
+    dust_slope, dust_int = np.polyfit(xs, dusts_50, 1)
+    mwa_slope, mwa_int = np.polyfit(xs, mwas_50, 1)
+    
+    outfile = '{}/pngs_degen/{}_ID_{}_new.pdf'.format(cluster, cluster, ID)
+    q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z = checks.load_FUVVJ_contours()
+    plt.plot_degeneracies([xs, xs, xs], [x_errs, x_errs, x_errs],
+                          [x_errs, x_errs, x_errs],
+                          [metals_50, dusts_50, mwas_50],
+                          [metal_lo, dust_lo, mwa_lo],
+                          [metal_hi, dust_hi, mwa_hi],
+                          [metals_best, dusts_best, mwas_best],
+                          [metal_slope, dust_slope, mwa_slope],
+                          [metal_int, dust_int, mwa_int],
+                          q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z,
+                          V_mag-J_mag, FUV_mag-V_mag,
+                          labels=['best fit/MAP', 'linear fit',
+                                  r'median$\pm 1\sigma$'],
+                          xlabel=r'Center of Annulus ($R_{\rm e}$)',
+                          list_of_ylabels=[r'$\log(Z/Z_{\odot})$',
+                                           r'Dust ($\hat{\tau}_{\lambda, 2}$)',
+                                           'MWA (Gyr)'], title=plot_title,
+                          xmin=0, xmax=(xs[-1]+x_errs[-1]),
+                          outfile=outfile, save=False, loc=loc)
     
     return
+
+# degenerate_results('a370', 3337, loc=1)
+# degenerate_results('a1063', 1366, loc=4)
+# degenerate_results('a1063', 2455, loc=4)
+# degenerate_results('a1063', 3550, loc=1)
+# degenerate_results('a1063', 4823, loc=1)
+# degenerate_results('a2744', 3859, loc=4)
+# degenerate_results('a2744', 3964, loc=1)
+# degenerate_results('a2744', 4173, loc=1)
+# degenerate_results('a2744', 4369, loc=4)
+# degenerate_results('a2744', 4765, loc=3)
+# degenerate_results('a2744', 4862, loc=1)
+# degenerate_results('a2744', 7427, loc=3)
+# degenerate_results('m416', 5997, loc=1)
+# degenerate_results('m416', 6255, loc=3)
+# degenerate_results('m717', 861, loc=2)
+# degenerate_results('m1149', 1967, loc=1)
+# degenerate_results('m1149', 2403, loc=1)
+# degenerate_results('m1149', 3531, loc=1)
+# degenerate_results('m1149', 4246, loc=1)
+# degenerate_results('m1149', 5095, loc=1)
