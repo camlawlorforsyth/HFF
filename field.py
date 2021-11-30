@@ -39,7 +39,7 @@ def determine_rms(segPath, files) :
     Estimate the RMS noise level in each flter image by using the
     segmentation map as a basic mask. Mask all the pixels that are
     associated with an object and determine the noise level from the
-    remaining background pixels.
+    remaining background pixels that have significant values.
     
     Returns
     -------
@@ -55,15 +55,27 @@ def determine_rms(segPath, files) :
     for file in files :
         with fits.open(file) as hdu :
             sci = hdu[0].data
+            exptime = hdu[0].header['EXPTIME']
         
-        mask = np.where(segMap == 0)
-        masked_sci = sci[mask]
+        threshold = 0.001/exptime
+        
+        bkg = sci[segMap == 0].flatten()
+    
+        neg = -1*bkg[bkg < 0]
+        neg = neg[neg > threshold]
+        neg = -1*neg
+        
+        pos = bkg[bkg >= 0]
+        pos = pos[pos > threshold]
+        
+        background = np.concatenate((neg, pos), axis=None)
         
         # mask out large values that will influence the rms
-        masked_sci[masked_sci > 10] = np.nan
-        masked_sci[masked_sci < -10] = np.nan
+        print(np.min(background), np.max(background))
+        # background[background > 10] = np.nan
+        # background[background < -10] = np.nan
         
-        rms = np.sqrt(np.nanmean(np.square(masked_sci)))
+        rms = np.sqrt(np.nanmean(np.square(background)))
         rmses.append(rms)
     
     return rmses
