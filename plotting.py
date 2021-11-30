@@ -1008,6 +1008,35 @@ def plot_simple(xs, ys, yerr, xerr=None, label='',
     
     return
 
+def plot_simple_multi(xs, ys, labels, colors,
+                      xlabel=None, ylabel=None, title=None,
+                      xmin=None, xmax=None, ymin=None, ymax=None,
+                      figsizewidth=9, figsizeheight=6) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    for i in range(len(xs)) :
+        ax.plot(xs[i], ys[i], 'o', color=colors[i], label=labels[i])
+    
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
 def plot_transmission_curves(wavelengths, throughputs, labels, colors,
                              text_x, text_y, xlabel, ylabel, ytick_labels=None,
                              xmin=None, xmax=None, ymin=None, ymax=None,

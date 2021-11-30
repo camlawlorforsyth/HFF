@@ -525,7 +525,7 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     
     return
 
-def open_cutout(infile, simple=False) :
+def open_cutout(infile, exp=False, simple=False) :
     '''
     Open a cutout image. If opening the F160W image in order to compute the
     Voroni bins, then also return the total exposure time for that image,
@@ -549,6 +549,7 @@ def open_cutout(infile, simple=False) :
     with fits.open(infile) as hdu :
         hdr = hdu[0].header
         redshift = hdr['Z']
+        exptime = hdr['EXPTIME']
         photfnu = hdr['PHOTFNU']
         R_e = hdr['R_e']
         sma = hdr['SMA']
@@ -559,6 +560,8 @@ def open_cutout(infile, simple=False) :
     
     if simple :
         return data
+    elif exp :
+        return data, exptime
     else :
         return data, dim, photfnu, R_e, redshift, sma, smb, pa
 
