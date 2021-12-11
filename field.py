@@ -71,9 +71,8 @@ def determine_rms(segPath, files) :
         background = np.concatenate((neg, pos), axis=None)
         
         # mask out large values that will influence the rms
-        print(np.min(background), np.max(background))
-        # background[background > 10] = np.nan
-        # background[background < -10] = np.nan
+        background[background > 10] = np.nan
+        background[background < -10] = np.nan
         
         rms = np.sqrt(np.nanmean(np.square(background)))
         rmses.append(rms)

@@ -46,7 +46,7 @@ def sample_randomly(cluster, filt, dims) :
     background = np.concatenate((neg, pos), axis=None)
     rms = np.sqrt(np.nanmean(np.square(background)))
     rms_in_electrons = exptime*rms
-    print(rms)
+    print(rms_in_electrons)
     
     '''
     random_signals, random_rmses = [], []
@@ -128,5 +128,31 @@ def compare_rms(cluster, filt) :
     
     return
 
-sample_randomly('a2744', 'f275w', [0])
+# sample_randomly('a2744', 'f275w', [0])
 # compare_rms('a2744', 'f275w')
+
+with fits.open('a2744/cutouts/a2744_ID_4369_f275w.fits') as hdu :
+    sci = hdu[0].data
+    exptime = hdu[0].header['EXPTIME']
+    photfnu = hdu[0].header['PHOTFNU']
+
+with fits.open('a2744/cutouts/a2744_ID_4369_f275w_noise.fits') as hdu :
+    noise = hdu[0].data
+
+bin_data = np.load('a2744/bins/a2744_ID_4369_annuli.npz')
+bin_image = bin_data['image']
+
+central_bin = np.int64(bin_image == 0)*sci
+total = np.sum(central_bin) # electron/s
+janskys = photfnu*total # janskys
+electrons = total*exptime
+print(janskys)
+
+central_noise = np.int64(bin_image == 0)*noise
+total_noise = np.sqrt(np.sum(np.square(central_noise))) # electron/s
+janskys_noise = photfnu*total_noise # janskys
+electrons_noise = total_noise*exptime
+print(janskys_noise)
+
+plotting.display_image_simple(central_bin*exptime, norm=None)
+

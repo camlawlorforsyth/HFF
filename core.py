@@ -427,7 +427,7 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
                                 redshift_tol_lo=0.01, redshift_tol_hi=0.01,
                                 z_spec=True, plot_all=False, plot_uvj=False,
                                 write_final_objs=False, write_regions=False,
-                                selection='FUVVJ') :
+                                selection='FUVVJ', verbose=False) :
     '''
     
     
@@ -519,9 +519,13 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     if write_final_objs :
         final_objs_file = '{}/{}_final_objects.fits'.format(cluster, cluster)
         final.write(final_objs_file)
+        if verbose :
+            print('Saved: Final objects to fits file.')
     
     if write_regions :
         save_regions(cluster, final)
+        if verbose :
+            print('Saved: Regions to file.')
     
     return
 
@@ -665,12 +669,13 @@ def save_regions(cluster, table) :
     
     '''
     
-    outDir = '{}/regions'.format(cluster)
-    os.makedirs(outDir, exist_ok=True)
+    os.makedirs('{}/regions'.format(cluster), exist_ok=True) # ensure the
+        # output directory is available
     
-    q_region_file = '{}/{}_final_QGs_R_e.reg'.format(outDir, cluster)
-    sf_region_file = '{}/{}_final_SFGs_R_e.reg'.format(outDir, cluster)
-    bCG_region_file = '{}/{}_final_bCGs_R_e.reg'.format(outDir, cluster)
+    q_region_file = '{}/regions/{}_final_QGs_R_e.reg'.format(cluster, cluster)
+    sf_region_file = '{}/regions/{}_final_SFGs_R_e.reg'.format(cluster, cluster)
+    bCG_region_file = '{}/regions/{}_final_bCGs_R_e.reg'.format(cluster, cluster)
+    bCG_sqr_file = '{}/regions/{}_bCGs_sqr.reg'.format(cluster, cluster)
     
     first = '# Region file format: DS9 version 4.1\n'
     q_second = ('global color=red width=2 select=1 ' +
@@ -714,7 +719,7 @@ def save_regions(cluster, table) :
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
                 file.write(string)
     
-    with open('{}/{}_bCGs_sqr.reg'.format(cluster, cluster), 'a+') as file :
+    with open(bCG_sqr_file, 'a+') as file :
         file.write(first)
         file.write(q_second)
         file.write('physical\n')

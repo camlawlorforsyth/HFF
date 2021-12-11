@@ -352,6 +352,43 @@ def histogram_multi(data, label, bins=[], log=False, histtype='step',
     
     return
 
+def histogram_2d(xvals, yvals, bins, centers, lines, cmap=cm.Blues,
+                 bad='white', norm=LogNorm(), outfile=None,
+                 xlabel=None, ylabel=None,
+                 xmin=None, xmax=None, ymin=None, ymax=None, save=False) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(8, 6))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = copy.copy(cmap)
+    cmap.set_bad(bad, 1)
+    
+    ax.hist2d(xvals, yvals, bins=bins, cmap=cmap, norm=norm)
+    
+    ax.plot(centers, lines[0], '--', color='w')
+    ax.plot(centers, lines[1], '-', color='w')
+    ax.plot(centers, lines[2], '--', color='w')
+    # ax.plot(centers, lines[3], ':', color='k')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
 def hst_transmission_curves(table, plot=True) :
     '''
     Prepare the data to plot the transmission curves for all the filters

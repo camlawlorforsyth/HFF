@@ -5,61 +5,62 @@ import numpy as np
 
 from astropy.table import Table, vstack
 from scipy.stats import kde
+from sedpy.observate import load_filters
 
 import core
 import plotting as plt
 
-def check_all_bins(plot=False, use_saved=False) :
+def save_all_bins() :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
     
-    if use_saved :
-        annuli_nums = np.load('number_of_annuli.npz')
-        nbCG_QG_lengths = annuli_nums['nonbCGs']
-        bCG_lengths = annuli_nums['bCGs']
+    all_clusters, all_IDs, all_lengths = [], [], []
+    for cluster in clusters :
+        phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
+                                                                    cluster)
+        phot_file_list = glob.glob(phot_paths)
+        IDs = []
+        for file in phot_file_list :
+            file = file.replace(os.sep, '/')
+            IDs.append(file.split('_')[2])
         
-        total_annuli = np.sum(nbCG_QG_lengths) + np.sum(bCG_lengths)
-        print(total_annuli)
+        IDs = np.array(IDs)
+        IDs = IDs.astype(int)
         
-    else :
-        nbCG_QG_lengths, bCG_lengths = [], []
-        for cluster in clusters :
-            photDir = '{}/photometry'.format(cluster)
-            phot_paths = '{}/{}_ID_*_photometry.fits'.format(photDir, cluster)
-            phot_file_list = glob.glob(phot_paths)
-            IDs = []
-            for file in phot_file_list :
-                file = file.replace(os.sep, '/')
-                IDs.append(file.split('_')[2])
+        for i in range(len(IDs)) :
+            table = Table.read(
+                '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                cluster,
+                                                                IDs[i]))
+            length = len(table)
             
-            IDs = np.array(IDs)
-            IDs = IDs.astype(int)
-            nbCG_QG_IDs = IDs[IDs < 20000]
-            bCG_IDs = IDs[IDs > 20000]
-            
-            for i in range(len(nbCG_QG_IDs)) :
-                table = Table.read(
-                    '{}/{}_ID_{}_photometry.fits'.format(photDir, cluster,
-                                                         nbCG_QG_IDs[i]))
-                length = len(table)
-                nbCG_QG_lengths.append(length)
-            
-            for i in range(len(bCG_IDs)) :
-                table = Table.read(
-                    '{}/{}_ID_{}_photometry.fits'.format(photDir, cluster,
-                                                         bCG_IDs[i]))
-                length = len(table)
-                bCG_lengths.append(length)
-        
-        np.savez('number_of_annuli.npz', nonbCGs=nbCG_QG_lengths,
-                                         bCGs=bCG_lengths)
+            all_clusters.append(cluster)
+            all_IDs.append(IDs[i])
+            all_lengths.append(length)
+    
+    master_table = Table([all_clusters, all_IDs, all_lengths],
+                         names=('cluster', 'ID', 'bins'))
+    master_table.write('output/number_of_annuli.csv')
+    
+    return
+
+def check_all_bins(plot=True) :
+    
+    table = Table.read('output/number_of_annuli.csv')
+    bins = table['bins']
+    nbCG_QG_bins = bins[table['ID'] < 20000]
+    # bCG_bins = bins[table['ID'] > 20000]
+    
+    # total_annuli = np.sum(nbCG_QG_bins) + np.sum(bCG_bins)
+    # print(total_annuli)
+    
     if plot :
-        numBins1 = int(np.ceil(np.sqrt(len(nbCG_QG_lengths))))
-        numBins2 = int(np.ceil(np.sqrt(len(bCG_lengths))))
+        numBins1 = int(np.ceil(np.sqrt(len(nbCG_QG_bins))))
+        # numBins2 = int(np.ceil(np.sqrt(len(bCG_bins))))
         
-        plt.histogram_multi([nbCG_QG_lengths, bCG_lengths], 'Number of Annuli',
-                            bins=[numBins1, numBins2], colors=['k', 'm'],
-                            labels=['non-bCG QGs', 'bCGs'], styles=['--', '-'])
+        plt.histogram_multi([nbCG_QG_bins], 'Number of Annuli',
+                            bins=[numBins1], colors=['k'],
+                            labels=['non-bCG QGs'], styles=['-'])
     
     return
 
@@ -265,7 +266,7 @@ def concatenate_all(both=False, save=False) :
     else :
         return all_clusters
 
-def load_FUVVJ_contours(infile='FUVVJ_contours.npz') :
+def load_FUVVJ_contours(infile='output/FUVVJ_contours.npz') :
     
     with np.load(infile) as data :
         q_xi, q_yi, q_z = data['q_xi'], data['q_yi'], data['q_z']
@@ -448,7 +449,7 @@ def save_bkgshists(cluster, filters, population) :
     else :
         nrows, ncols = 4, 5
     
-    outDir = '{}/pngs_bkgdists'.format(cluster)
+    outDir = '{}/images_bkg_dists'.format(cluster)
     os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
     
     # now loop here over all the IDs that are available
@@ -461,8 +462,8 @@ def save_bkgshists(cluster, filters, population) :
     IDs = list(clustable['id'])
     
     for i in range(len(IDs)) :
-        outfile = '{}/pngs_bkgdists/{}_ID_{}.png'.format(cluster, cluster,
-                                                         IDs[i])
+        outfile = '{}/images_bkg_dists/{}_ID_{}.png'.format(cluster, cluster,
+                                                            IDs[i])
         
         segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
                                                            IDs[i])
@@ -512,7 +513,7 @@ def save_pngs(cluster, filters, population) :
         nrows, ncols = 4, 5
     
     outDir = '{}/pngs'.format(cluster)
-    outDirAlt = '{}/pngs_segmap'.format(cluster)
+    outDirAlt = '{}/images_cutouts_segmapped'.format(cluster)
     
     # os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
         # directory for the pngs is available
@@ -568,16 +569,19 @@ def save_pngs(cluster, filters, population) :
     
     return
 
-def save_sbps(cluster, population) :
+def save_sbps(cluster, subpop) :
     
-    outDir = '{}/pngs_sbps'.format(cluster)
+    outDir = '{}/images_sbps'.format(cluster)
     os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
     
-    # open the table of all the objects 
-    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    # open the table of all the objects
+    if subpop == 'non-bCG' :
+        clustable = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
+                                                               cluster))
     
+    # clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
     # mask the table based on the population of interest
-    clustable = clustable[clustable['pop'] == population]
+    # clustable = clustable[clustable['pop'] == population]
     
     IDs = list(clustable['id'])
     
@@ -585,159 +589,158 @@ def save_sbps(cluster, population) :
         infile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
                                                                  cluster,
                                                                  IDs[i])
-        outfile = '{}/pngs_sbps/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
+        outfile = '{}/images_sbps/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
         
         try :
             table = Table.read(infile)
-        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
-            pass
-        
-        flux_columns = [col for col in table.colnames if col.endswith('_flux')]
-        nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
-        filternames = [col.replace('_flux', '') for col in flux_columns]
-        
-        if len(filternames) == 9 :
-            colors = ['violet',        # F275W
-                      'mediumorchid',  # F336W
-                      'darkslateblue', # F435W
-                      'deepskyblue',   # F606W
-                      'lime',          # F814W
-                      'yellow',        # F105W
-                      'darkorange',    # F125W
-                      'orangered',     # F140W
-                      'red']           # F160W
-        if len(filternames) == 12 :
-            colors = ['violet',        # F275W
-                      'mediumorchid',  # F336W
-                      'darkslateblue', # F435W
-                      'royalblue',     # F475W
-                      'deepskyblue',   # F606W
-                      'cyan',          # F625W
-                      'lime',          # F814W
-                      'yellow',        # F105W
-                      'gold',          # F110W
-                      'darkorange',    # F125W
-                      'orangered',     # F140W
-                      'red']           # F160W
-        if len(filternames) == 16 :
-            colors = ['hotpink',       # F225W
-                      'violet',        # F275W
-                      'mediumorchid',  # F336W
-                      'darkviolet',    # F390W
-                      'darkslateblue', # F435W
-                      'royalblue',     # F475W
-                      'deepskyblue',   # F606W
-                      'cyan',          # F625W
-                      'springgreen',   # F775W
-                      'lime',          # F814W
-                      'greenyellow',   # F850LP
-                      'yellow',        # F105W
-                      'gold',          # F110W
-                      'darkorange',    # F125W
-                      'orangered',     # F140W
-                      'red']           # F160W
-        if len(filternames) == 17 :
-            colors = ['hotpink',       # F225W
-                      'violet',        # F275W
-                      'mediumorchid',  # F336W
-                      'darkviolet',    # F390W
-                      'darkslateblue', # F435W
-                      'royalblue',     # F475W
-                      'dodgerblue',    # F555W
-                      'deepskyblue',   # F606W
-                      'cyan',          # F625W
-                      'springgreen',   # F775W
-                      'lime',          # F814W
-                      'greenyellow',   # F850LP
-                      'yellow',        # F105W
-                      'gold',          # F110W
-                      'darkorange',    # F125W
-                      'orangered',     # F140W
-                      'red']           # F160W
-        
-        xs = table['sma']/table['R_e']
-        x_max = max(xs) + 1
-        
-        ys = []
-        for j in range(len(flux_columns)) :
-            maggies_per_pix = list(table[flux_columns[j]]/3631/table[nPix_columns[j]])
-            ys.append(maggies_per_pix)
-        
-        plt.plot_sed(xs, ys, filternames, colors, outfile,
-                     xlabel=r'Radius ($R_{\rm e}$)',
-                     ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
-                     xmax=x_max, save=True)
-    
-    return
-
-def save_seds(cluster, population) :
-    
-    from sedpy.observate import load_filters
-    
-    outDir = '{}/pngs_seds'.format(cluster)
-    os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
-    
-    # open the table of all the objects 
-    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
-    
-    # mask the table based on the population of interest
-    clustable = clustable[clustable['pop'] == population]
-    
-    IDs = list(clustable['id'])
-    
-    for i in range(len(IDs)) :
-        infile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
-                                                                 cluster,
-                                                                 IDs[i])
-        outfile = '{}/pngs_seds/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
-        
-        try :
-            table = Table.read(infile)
-        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
-            pass
-        
-        flux_columns = [col for col in table.colnames if col.endswith('_flux')]
-        nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
-        filternames = ['hff_' + col.replace('_flux', '') for col in flux_columns]
-        
-        colors = ['red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
-                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
-                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink',
-                  'red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
-                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
-                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink',
-                  'red', 'orangered', 'darkorange', 'gold', 'yellow', 'greenyellow',
-                  'lime', 'springgreen', 'cyan', 'deepskyblue', 'dodgerblue', 'royalblue',
-                  'darkslateblue', 'darkviolet', 'mediumorchid', 'violet', 'hotpink']
-        
-        ys = []
-        labels = []
-        for j in range(len(table)) :
-            fluxes = np.array(list(table[flux_columns][j]))/3631 # in maggies
-            nPixels = np.array(list(table[nPix_columns][j]))
+            flux_columns = [col for col in table.colnames if col.endswith('_flux')]
+            nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
+            filternames = [col.replace('_flux', '') for col in flux_columns]
             
-            maggies_per_pix = fluxes/nPixels
-            ys.append(maggies_per_pix)
-            labels.append('bin {}'.format(j))
+            if len(filternames) == 9 :
+                colors = ['violet',        # F275W
+                          'mediumorchid',  # F336W
+                          'darkslateblue', # F435W
+                          'deepskyblue',   # F606W
+                          'lime',          # F814W
+                          'yellow',        # F105W
+                          'darkorange',    # F125W
+                          'orangered',     # F140W
+                          'red']           # F160W
+            if len(filternames) == 12 :
+                colors = ['violet',        # F275W
+                          'mediumorchid',  # F336W
+                          'darkslateblue', # F435W
+                          'royalblue',     # F475W
+                          'deepskyblue',   # F606W
+                          'cyan',          # F625W
+                          'lime',          # F814W
+                          'yellow',        # F105W
+                          'gold',          # F110W
+                          'darkorange',    # F125W
+                          'orangered',     # F140W
+                          'red']           # F160W
+            if len(filternames) == 16 :
+                colors = ['hotpink',       # F225W
+                          'violet',        # F275W
+                          'mediumorchid',  # F336W
+                          'darkviolet',    # F390W
+                          'darkslateblue', # F435W
+                          'royalblue',     # F475W
+                          'deepskyblue',   # F606W
+                          'cyan',          # F625W
+                          'springgreen',   # F775W
+                          'lime',          # F814W
+                          'greenyellow',   # F850LP
+                          'yellow',        # F105W
+                          'gold',          # F110W
+                          'darkorange',    # F125W
+                          'orangered',     # F140W
+                          'red']           # F160W
+            if len(filternames) == 17 :
+                colors = ['hotpink',       # F225W
+                          'violet',        # F275W
+                          'mediumorchid',  # F336W
+                          'darkviolet',    # F390W
+                          'darkslateblue', # F435W
+                          'royalblue',     # F475W
+                          'dodgerblue',    # F555W
+                          'deepskyblue',   # F606W
+                          'cyan',          # F625W
+                          'springgreen',   # F775W
+                          'lime',          # F814W
+                          'greenyellow',   # F850LP
+                          'yellow',        # F105W
+                          'gold',          # F110W
+                          'darkorange',    # F125W
+                          'orangered',     # F140W
+                          'red']           # F160W
+            
+            xs = table['sma']/table['R_e']
+            x_max = max(xs) + 1
+            
+            ys = []
+            for j in range(len(flux_columns)) :
+                maggies_per_pix = list(table[flux_columns[j]]/3631/table[nPix_columns[j]])
+                ys.append(maggies_per_pix)
+            
+            plt.plot_sed(xs, ys, filternames, colors, outfile,
+                         xlabel=r'Radius ($R_{\rm e}$)',
+                         ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
+                         xmax=x_max, save=True)
         
-        filters = load_filters(filternames)
-        xs = np.array([f.wave_effective for f in filters])
-        
-        x_min, x_max = np.min(xs)*0.8, np.max(xs)/0.8
-        
-        yflat = np.array(ys).flatten()
-        ytemp = yflat[~np.isnan(yflat)]
-        y_min, y_max = np.max([np.min(ytemp), 1e-15])*0.8, np.max(ytemp)/0.4
-        
-        plt.plot_sed(xs, ys, labels, colors, outfile,
-                      xlabel=r'Wavelength ($\rm \AA$)',
-                      ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
-                      xmin=x_min, xmax=x_max, ymin=y_min, ymax=y_max, save=True)
+        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
+            pass
     
     return
 
-# check_all_bins(plot=True, use_saved=True)
-
-# check_total_flux('f160w')
-
-
+def save_seds(cluster, subpop) :
+    
+    outDir = '{}/images_seds'.format(cluster)
+    os.makedirs(outDir, exist_ok=True) # ensure the output direc. is available
+    
+    # open the table of all the objects
+    if subpop == 'non-bCG' :
+        clustable = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
+                                                               cluster))
+    
+    # clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    # mask the table based on the population of interest
+    # clustable = clustable[clustable['pop'] == population]
+    
+    IDs = list(clustable['id'])
+    
+    for i in range(len(IDs)) :
+        infile = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                 cluster,
+                                                                 IDs[i])
+        outfile = '{}/images_seds/{}_ID_{}.png'.format(cluster, cluster, IDs[i])
+        
+        try :
+            table = Table.read(infile)
+            flux_columns = [col for col in table.colnames if col.endswith('_flux')]
+            nPix_columns = [col.replace('flux', 'nPix') for col in flux_columns]
+            filternames = ['hff_' + col.replace('_flux', '') for col in flux_columns]
+            
+            colors = ['red', 'orangered', 'darkorange', 'gold', 'yellow',
+                      'greenyellow', 'lime', 'springgreen', 'cyan',
+                      'deepskyblue', 'dodgerblue', 'royalblue',
+                      'darkslateblue', 'darkviolet', 'mediumorchid', 'violet',
+                      'hotpink', 'red', 'orangered', 'darkorange', 'gold',
+                      'yellow', 'greenyellow', 'lime', 'springgreen', 'cyan',
+                      'deepskyblue', 'dodgerblue', 'royalblue',
+                      'darkslateblue', 'darkviolet', 'mediumorchid', 'violet',
+                      'hotpink', 'red', 'orangered', 'darkorange', 'gold',
+                      'yellow', 'greenyellow', 'lime', 'springgreen', 'cyan',
+                      'deepskyblue', 'dodgerblue', 'royalblue',
+                      'darkslateblue', 'darkviolet', 'mediumorchid', 'violet',
+                      'hotpink']
+            
+            ys = []
+            labels = []
+            for j in range(len(table)) :
+                fluxes = np.array(list(table[flux_columns][j]))/3631 # in maggies
+                nPixels = np.array(list(table[nPix_columns][j]))
+                
+                maggies_per_pix = fluxes/nPixels
+                ys.append(maggies_per_pix)
+                labels.append('bin {}'.format(j))
+            
+            filters = load_filters(filternames)
+            xs = np.array([f.wave_effective for f in filters])
+            
+            x_min, x_max = np.min(xs)*0.8, np.max(xs)/0.8
+            
+            yflat = np.array(ys).flatten()
+            ytemp = yflat[~np.isnan(yflat)]
+            y_min, y_max = np.max([np.min(ytemp), 1e-15])*0.8, np.max(ytemp)/0.4
+            
+            plt.plot_sed(xs, ys, labels, colors, outfile,
+                          xlabel=r'Wavelength ($\rm \AA$)',
+                          ylabel=r'Spatial Flux Density (maggies pixel$^{-1}$)',
+                          xmin=x_min, xmax=x_max, ymin=y_min, ymax=y_max, save=True)
+        
+        except FileNotFoundError : # passes over A1063 ID 4746 and ID 5638
+            pass
+    
+    return

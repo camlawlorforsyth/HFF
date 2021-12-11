@@ -135,6 +135,8 @@ dmypy.json
 *.dat
 *.dat.gz
 *.eps.gz
+*.fit
+*.fit.gz
 *.fits
 *.fits.gz
 *.fout

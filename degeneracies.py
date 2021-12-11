@@ -15,10 +15,10 @@ import plotting as plt
 
 hst_pixelscale = u.pixel_scale(0.06*u.arcsec/u.pixel)
 
-def degenerate_results(cluster, ID, loc=0, save=True, version='') :
+def degenerate_results(cluster, ID, loc=0, save=False, version='') :
     
     if save :
-        os.makedirs('{}/pngs_degen'.format(cluster), # ensure the output
+        os.makedirs('{}/images_degen_plots'.format(cluster), # ensure the output
                     exist_ok=True) # directory for the figures is available
     
     '''
@@ -38,8 +38,8 @@ def degenerate_results(cluster, ID, loc=0, save=True, version='') :
         ID = file.split('_')[2] # the galaxy ID to fit the bins for
     '''
     
-    file = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster, cluster,
-                                                            ID)
+    file = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster, cluster, ID)
+    
     table = Table.read(file)
     bins = table['bin'] # get a list of bin values
     R_e = table['R_e']
@@ -62,24 +62,7 @@ def degenerate_results(cluster, ID, loc=0, save=True, version='') :
     dusts_16, dusts_50, dusts_84, dusts_best = [], [], [], []
     mwas_16, mwas_50, mwas_84, mwas_best = [], [], [], []
     for binNum in bins : # loop over all the bins in the table
-        if (cluster == 'a370') and (ID == 3337) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'a1063') and (ID == 1366) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'a2744') and (ID == 3859) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'a2744') and (ID == 4369) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'a2744') and (ID == 7427) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'm416') and (ID == 5997) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'm1149') and (ID == 1967) and (binNum == 0) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        elif (cluster == 'm1149') and (ID == 1967) and (binNum == 1) :
-            infile = '{}/h5/ID_{}_bin_{}_v2.h5'.format(cluster, ID, binNum)
-        else :
-            infile = '{}/h5/ID_{}_bin_{}.h5'.format(cluster, ID, binNum)
+        infile = '{}/h5/{}_ID_{}_bin_{}.h5'.format(cluster, cluster, ID, binNum)
         result, obs, _ = reader.results_from(infile, dangerous=True)
         
         zred, mass, logzsol, dust2, tage, tau = result['bestfit']['parameter']
@@ -123,9 +106,11 @@ def degenerate_results(cluster, ID, loc=0, save=True, version='') :
     metal_slope, metal_int = np.polyfit(xs, metals_50, 1)
     dust_slope, dust_int = np.polyfit(xs, dusts_50, 1)
     mwa_slope, mwa_int = np.polyfit(xs, mwas_50, 1)
+    print(mwa_slope)
     
-    outfile = '{}/pngs_degen/{}_ID_{}_new.pdf'.format(cluster, cluster, ID)
+    outfile = '{}/images_degen_plots/{}_ID_{}_new.pdf'.format(cluster, cluster, ID)
     q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z = checks.load_FUVVJ_contours()
+    '''
     plt.plot_degeneracies([xs, xs, xs], [x_errs, x_errs, x_errs],
                           [x_errs, x_errs, x_errs],
                           [metals_50, dusts_50, mwas_50],
@@ -144,26 +129,26 @@ def degenerate_results(cluster, ID, loc=0, save=True, version='') :
                                            'MWA (Gyr)'], title=plot_title,
                           xmin=0, xmax=(xs[-1]+x_errs[-1]),
                           outfile=outfile, save=False, loc=loc)
-    
+    '''
     return
 
-# degenerate_results('a370', 3337, loc=1)
-# degenerate_results('a1063', 1366, loc=4)
-# degenerate_results('a1063', 2455, loc=4)
-# degenerate_results('a1063', 3550, loc=1)
-# degenerate_results('a1063', 4823, loc=1)
-# degenerate_results('a2744', 3859, loc=4)
-# degenerate_results('a2744', 3964, loc=1)
-# degenerate_results('a2744', 4173, loc=1)
-# degenerate_results('a2744', 4369, loc=4)
-# degenerate_results('a2744', 4765, loc=3)
-# degenerate_results('a2744', 4862, loc=1)
-# degenerate_results('a2744', 7427, loc=3)
-# degenerate_results('m416', 5997, loc=1)
-# degenerate_results('m416', 6255, loc=3)
-# degenerate_results('m717', 861, loc=2)
-# degenerate_results('m1149', 1967, loc=1)
-# degenerate_results('m1149', 2403, loc=1)
-# degenerate_results('m1149', 3531, loc=1)
-# degenerate_results('m1149', 4246, loc=1)
-# degenerate_results('m1149', 5095, loc=1)
+degenerate_results('a370', 3337, loc=1)
+degenerate_results('a1063', 1366, loc=3)
+degenerate_results('a1063', 2455, loc=3)
+degenerate_results('a1063', 3550, loc=1)
+degenerate_results('a1063', 4823, loc=1)
+degenerate_results('a2744', 3859, loc=3)
+degenerate_results('a2744', 3964, loc=3)
+degenerate_results('a2744', 4173, loc=3)
+degenerate_results('a2744', 4369, loc=1)
+degenerate_results('a2744', 4765, loc=1)
+degenerate_results('a2744', 4862, loc=3)
+degenerate_results('a2744', 7427, loc=4)
+degenerate_results('m416', 5997, loc=2)
+degenerate_results('m416', 6255, loc=1)
+degenerate_results('m717', 861, loc=1)
+degenerate_results('m1149', 1967, loc=3)
+degenerate_results('m1149', 2403, loc=2)
+degenerate_results('m1149', 3531, loc=4)
+degenerate_results('m1149', 4246, loc=1)
+degenerate_results('m1149', 5095, loc=2)

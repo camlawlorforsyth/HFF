@@ -123,6 +123,12 @@ if __name__ == '__main__' :
     args = parser.parse_args()
     run_params = vars(args)
     
+    run_params['dynesty'] = True
+    binNum = run_params['binNum']
+    cluster, _, ID, _ = run_params['infile'].split('/')[-1].split('_')
+    outfile = '{}/h5/{}_ID_{}_bin_{}'.format(cluster, cluster, ID, binNum)
+    run_params['outfile'] = outfile
+    
     obs, model, sps, noise = build_all(**run_params)
     
     run_params['sps_libraries'] = sps.ssp.libraries
@@ -133,7 +139,7 @@ if __name__ == '__main__' :
     
     output = fit_model(obs, model, sps, noise, **run_params)
     
-    hfile = '{}.h5'.format(args.outfile)
+    hfile = '{}.h5'.format(outfile)
     writer.write_hdf5(hfile, run_params, model, obs,
                       output['sampling'][0], output['optimization'][0],
                       tsample=output['sampling'][1],
