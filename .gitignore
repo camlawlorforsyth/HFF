@@ -164,5 +164,6 @@ dmypy.json
 *.npz
 *.png
 *.reg
+*.sh
 *.txt
 *.h5

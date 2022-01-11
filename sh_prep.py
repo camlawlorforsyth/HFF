@@ -4,8 +4,40 @@ import glob
 
 from astropy.table import Table
 
-clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+# clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
 
+def prep_for_running_on_astro_and_quixote() :
+    
+    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+    outfile = 'astro1.sh'
+    
+    with open(outfile, 'a') as slurm :
+        slurm.write('#!/usr/bin/env bash\n')
+        slurm.write('\n')
+    
+    for cluster in clusters :
+        phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
+                                                                    cluster)
+        phots = glob.glob(phot_paths)
+        
+        for file in phots :
+            file = file.replace(os.sep, '/') # compatibility for Windows
+            ID = int(file.split('_')[2]) # the galaxy ID to fit the bins for
+            
+            table = Table.read(file)
+            bins = table['bin'] # get a list of bin values
+            for binNum in bins : # loop over all the bins in the table
+                outLog = '{}/logs/{}_ID_{}_bin_{}.log'.format(cluster, cluster, ID, binNum)
+                cmd = ('nohup python params.py' +
+                       ' --infile {} '.format(file) +
+                       ' --binNum {} >> {} 2>&1\n'.format(binNum, outLog))
+                
+                with open(outfile, 'a') as slurm :
+                    slurm.write(cmd)
+    
+    return
+
+"""
 for cluster in clusters :
     os.makedirs('{}/h5'.format(cluster), # ensure the output directory for the
                 exist_ok=True)           # results is available
@@ -62,3 +94,4 @@ for cluster in clusters :
                 slurm.write('module load python/3.8.10\n')
                 slurm.write(cmd)
             '''
+"""

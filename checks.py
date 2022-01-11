@@ -10,49 +10,15 @@ from sedpy.observate import load_filters
 import core
 import plotting as plt
 
-def save_all_bins() :
-    
-    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
-    
-    all_clusters, all_IDs, all_lengths = [], [], []
-    for cluster in clusters :
-        phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
-                                                                    cluster)
-        phot_file_list = glob.glob(phot_paths)
-        IDs = []
-        for file in phot_file_list :
-            file = file.replace(os.sep, '/')
-            IDs.append(file.split('_')[2])
-        
-        IDs = np.array(IDs)
-        IDs = IDs.astype(int)
-        
-        for i in range(len(IDs)) :
-            table = Table.read(
-                '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
-                                                                cluster,
-                                                                IDs[i]))
-            length = len(table)
-            
-            all_clusters.append(cluster)
-            all_IDs.append(IDs[i])
-            all_lengths.append(length)
-    
-    master_table = Table([all_clusters, all_IDs, all_lengths],
-                         names=('cluster', 'ID', 'bins'))
-    master_table.write('output/number_of_annuli.csv')
-    
-    return
-
 def check_all_bins(plot=True) :
     
     table = Table.read('output/number_of_annuli.csv')
     bins = table['bins']
     nbCG_QG_bins = bins[table['ID'] < 20000]
-    # bCG_bins = bins[table['ID'] > 20000]
+    bCG_bins = bins[table['ID'] > 20000]
     
-    # total_annuli = np.sum(nbCG_QG_bins) + np.sum(bCG_bins)
-    # print(total_annuli)
+    total_annuli = np.sum(nbCG_QG_bins) + np.sum(bCG_bins)
+    print(total_annuli)
     
     if plot :
         numBins1 = int(np.ceil(np.sqrt(len(nbCG_QG_bins))))
@@ -434,6 +400,40 @@ def plot_parallel_objects_all() :
     #                  xlabel=r'$\log(M_{*}/M_{\odot})$',
     #                  ylabel=r'$z$',
     #                  xmin=2, xmax=14, ymin=0, ymax=0.9)
+    
+    return
+
+def save_all_bins() :
+    
+    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+    
+    all_clusters, all_IDs, all_lengths = [], [], []
+    for cluster in clusters :
+        phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
+                                                                    cluster)
+        phot_file_list = glob.glob(phot_paths)
+        IDs = []
+        for file in phot_file_list :
+            file = file.replace(os.sep, '/')
+            IDs.append(file.split('_')[2])
+        
+        IDs = np.array(IDs)
+        IDs = IDs.astype(int)
+        
+        for i in range(len(IDs)) :
+            table = Table.read(
+                '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster,
+                                                                cluster,
+                                                                IDs[i]))
+            length = len(table)
+            
+            all_clusters.append(cluster)
+            all_IDs.append(IDs[i])
+            all_lengths.append(length)
+    
+    master_table = Table([all_clusters, all_IDs, all_lengths],
+                         names=('cluster', 'ID', 'bins'))
+    master_table.write('output/number_of_annuli.csv')
     
     return
 
