@@ -54,6 +54,30 @@ def check_distributions() :
     
     return
 
+def check_fit_progress() :
+    
+    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+    
+    for cluster in clusters :
+        phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
+                                                                    cluster)
+        phots = glob.glob(phot_paths)
+        
+        for file in phots :
+            file = file.replace(os.sep, '/') # compatibility for Windows
+            ID = int(file.split('_')[2]) # the galaxy ID to fit the bins for
+            
+            table = Table.read(file)
+            bins = table['bin'] # get a list of bin values
+            for binNum in bins : # loop over all the bins in the table
+                h5_file = '{}/h5/{}_ID_{}_bin_{}.h5'.format(cluster, cluster,
+                                                            ID, binNum)
+                
+                if not os.path.isfile(h5_file) :
+                    print('Missing {}'.format(h5_file))
+    
+    return
+
 def check_SNR(filt) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
