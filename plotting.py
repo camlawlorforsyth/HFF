@@ -352,13 +352,13 @@ def histogram_multi(data, label, bins=[], log=False, histtype='step',
     
     return
 
-def histogram_2d(xvals, yvals, bins, centers, lines, cmap=cm.Blues,
-                 bad='white', norm=LogNorm(), outfile=None,
-                 xlabel=None, ylabel=None,
+def histogram_2d(xvals, yvals, bins, centers, lines, fitx, fity, datax, datay,
+                 labels, cmap=cm.Blues, bad='white', norm=LogNorm(),
+                 outfile=None, xlabel=None, ylabel=None,
                  xmin=None, xmax=None, ymin=None, ymax=None, save=False) :
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(8, 6))
+    fig = plt.figure(currentFig, figsize=(9.5, 7))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
@@ -366,18 +366,31 @@ def histogram_2d(xvals, yvals, bins, centers, lines, cmap=cm.Blues,
     cmap = copy.copy(cmap)
     cmap.set_bad(bad, 1)
     
-    ax.hist2d(xvals, yvals, bins=bins, cmap=cmap, norm=norm)
+    ax.hist2d(xvals, yvals, bins=bins, range=[[xmin, xmax], [ymin, ymax]],
+              cmap=cmap, norm=norm)
     
-    ax.plot(centers, lines[0], '--', color='w')
-    ax.plot(centers, lines[1], '-', color='w')
-    ax.plot(centers, lines[2], '--', color='w')
-    # ax.plot(centers, lines[3], ':', color='k')
+    if len(lines) == 1 :
+        styles = ['-']
+    elif len(lines) == 3 :
+        styles = ['--', '-', '--']
+    elif len(lines) == 5 :
+        styles = [':', '--', '-', '--', ':']
+    else :
+        print('Unknown length of `lines`.')
+    
+    for i in range(len(lines)) :
+        ax.plot(centers, lines[i], styles[i], color='k')
+    
+    ax.plot(fitx, fity, 'r-', label=labels[0])
+    ax.plot(datax, datay, 'ro', label=labels[1])
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
+    ax.legend(loc='lower right', facecolor='whitesmoke', framealpha=1,
+              fontsize=15)
     
     plt.tight_layout()
     

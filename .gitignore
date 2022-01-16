@@ -165,5 +165,6 @@ dmypy.json
 *.png
 *.reg
 *.sh
+*.tar.gz
 *.txt
 *.h5
