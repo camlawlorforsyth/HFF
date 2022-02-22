@@ -20,7 +20,7 @@ cd
 git clone https://github.com/bd-j/sedpy
 # now copy all the 'hff_f*.par' files from /home/clawlorf/HFF/hff_filters/ into sedpy/sedpy/data/filters/
 cd sedpy
-python -m pip install . # v0.2.0
+python -m pip install . # v0.2.1
 
 cd
 git clone https://github.com/bd-j/prospector

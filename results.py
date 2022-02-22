@@ -123,11 +123,12 @@ def results_sed(cluster, ID, binNum, results_type='dynesty', save=False,
                                                                    version)
     
     plt.plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
-                          model_waves, chisq=chisq/df, title=outfile,
+                          model_waves, #chisq=chisq/df,
+                          title=outfile,
                           save=save)
     
     # print('{:.2f}'.format(chisq/df))
-    print(fluxes[0]/e_fluxes[0])
+    # print(fluxes[0]/e_fluxes[0])
     
     return
 
@@ -327,3 +328,17 @@ def save_map_models(cluster, ID, binNum, mapfile=None, results_type='dynesty',
 # results_sed('m1149', 5095, 1)
 # results_sed('m1149', 5095, 2)
 '''
+
+results_sed('m416', 2876, 0)
+
+# results for the flat gradient
+# results_corner('a1063', 4823, 0)
+# results_corner('a1063', 4823, 1)
+# results_corner('a1063', 4823, 2)
+# results_corner('a1063', 4823, 3)
+
+# results_corner('a1063', 5156, 0)
+# results_corner('a1063', 5156, 1)
+# results_corner('a1063', 5156, 2)
+# results_corner('a1063', 5156, 3)
+# results_corner('a1063', 5156, 4)
