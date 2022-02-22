@@ -3,9 +3,10 @@ import os
 import glob
 import numpy as np
 
-from astropy.table import Table, vstack
+from astropy.table import Table, vstack, join
 from scipy.stats import kde
 from sedpy.observate import load_filters
+import statmorph
 
 import core
 import plotting as plt
@@ -27,6 +28,22 @@ def check_all_bins(plot=True) :
         plt.histogram_multi([nbCG_QG_bins], 'Number of Annuli',
                             bins=[numBins1], colors=['k'],
                             labels=['non-bCG QGs'], styles=['-'])
+    
+    return
+
+def check_asymmetries() :
+    
+    mass_table = Table.read('output/tables/nbCGs_with-Shipley-mass.fits')
+    asymm_table = Table.read('output/tables/nbCGs_asymmetries.fits')
+    
+    table = join(mass_table, asymm_table, keys=['cluster', 'ID'])
+    # table.sort('asymmetry')
+    # table.pprint(max_lines=-1, max_width=-1)
+    
+    plt.plot_simple_multi([table['logM']], [table['asymmetry']],
+                          [''], ['k'], ['o'], [''],
+                          xlabel=r'$\log(M/M_{\odot})$', ylabel='Asymmetry',
+                          scale='linear', xmin=8, xmax=11.5, ymin=-1, ymax=1)
     
     return
 
@@ -458,6 +475,30 @@ def save_all_bins() :
     master_table = Table([all_clusters, all_IDs, all_lengths],
                          names=('cluster', 'ID', 'bins'))
     master_table.write('output/number_of_annuli.csv')
+    
+    return
+
+def save_asymmetries(filt='f160w') :
+    
+    HFF = Table.read('output/tables/nbCGs.fits')
+    
+    asymmetries = []
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        sci = core.open_cutout('{}/cutouts/{}_ID_{}_{}.fits'.format(
+            cluster, cluster, ID, filt), simple=True)
+        
+        err = core.open_cutout('{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
+            cluster, cluster, ID, filt), simple=True)
+        
+        segmap = core.open_cutout('{}/cutouts/{}_ID_{}_segmap.fits'.format(
+            cluster, cluster, ID), simple=True)
+        
+        morph = statmorph.source_morphology(sci, segmap, weightmap=err,
+                                            label=ID)
+        asymmetries.append(morph.asymmetry)
+    
+    HFF['asymmetry'] = asymmetries
+    HFF.write('output/tables/nbCGs_asymmetries_NEW.fits')
     
     return
 

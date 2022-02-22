@@ -529,7 +529,13 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     
     return
 
-def open_cutout(infile, exp=False, simple=False) :
+def exp(xx, aa, bb, cc) :
+    return aa - np.exp(-(xx-bb)/cc)
+
+def linear(xx, aa, bb) :
+    return aa*xx + bb
+
+def open_cutout(infile, exp=False, simple=False, phot=False) :
     '''
     Open a cutout image. If opening the F160W image in order to compute the
     Voroni bins, then also return the total exposure time for that image,
@@ -566,8 +572,36 @@ def open_cutout(infile, exp=False, simple=False) :
         return data
     elif exp :
         return data, exptime
+    elif phot :
+        return data*photfnu
     else :
         return data, dim, photfnu, R_e, redshift, sma, smb, pa
+
+def open_image(cluster, ID, direc) :
+    
+    with fits.open('{}/{}_images/{}_ID_{}_{}.fits'.format(
+            cluster, direc, cluster, ID, direc)) as hdu :
+        image = hdu[0].data
+    
+    return image
+
+def save_bin_images() :
+    
+    HFF = Table.read('output/tables/nbCGs.fits')
+    
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        os.makedirs('{}/bins_images'.format(cluster), exist_ok=True)
+        # ensure the output directory for the bins images is available
+        
+        # save images based on the annuli/binning
+        bin_data = np.load('{}/bins/{}_ID_{}_annuli.npz'.format(
+            cluster, cluster, ID))
+        
+        hdu = fits.PrimaryHDU(bin_data['image'])
+        hdu.writeto('{}/bins_images/{}_ID_{}_bins.fits'.format(
+            cluster, cluster, ID))
+    
+    return
 
 def save_cutout(xx, yy, angular_size, data, outfile, exposure, photfnu, scale,
                 rms, r_e, redshift, sma, smb, pa, vmin=None, vmax=None,
@@ -652,6 +686,33 @@ def save_cutout(xx, yy, angular_size, data, outfile, exposure, photfnu, scale,
     
     return
 
+def save_flux_fraction_images() :
+    
+    HFF = Table.read('output/tables/nbCGs.fits')
+    
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        # ensure the output directory for the flux fraction images is available
+        os.makedirs('{}/fluxfrac_images'.format(cluster), exist_ok=True)
+        
+        # save flux fraction images based on F160W
+        flux = open_cutout('{}/cutouts/{}_ID_{}_f160w.fits'.format(
+            cluster, cluster, ID), simple=True)
+        
+        segmap = open_cutout('{}/cutouts/{}_ID_{}_segmap.fits'.format(
+            cluster, cluster, ID), simple=True)
+        
+        bins = open_image(cluster, ID, 'bins')
+        
+        # mask pixels associated with other galaxies, that aren't in an annulus
+        flux[(segmap > 0) & (segmap != ID)] = 0
+        flux[np.isnan(bins)] = 0
+        
+        hdu = fits.PrimaryHDU(flux/np.sum(flux))
+        hdu.writeto('{}/fluxfrac_images/{}_ID_{}_fluxfrac.fits'.format(
+            cluster, cluster, ID))
+    
+    return
+
 def save_regions(cluster, table) :
     '''
     Save region files containing the locations of the different populations.
@@ -732,3 +793,6 @@ def save_regions(cluster, table) :
                 file.write(string)
     
     return
+
+def tanh(xx, aa, bb, cc, dd) :
+    return aa + bb*np.tanh((xx - cc)/dd)

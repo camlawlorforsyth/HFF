@@ -1,112 +1,91 @@
 
 import os
-import glob
 import numpy as np
 
 from astropy.io import fits
-from astropy.table import Table, join
+from astropy.table import Table
 import prospect.io.read_results as reader
 from prospect.plotting.utils import sample_posterior
 from scipy.optimize import curve_fit
 
-from core import open_cutout
+import core
 import plotting as plt
 
-def prep(save=False) :
+def compare_masses() :
     
-    info = Table.read('catalogs/SDSS_DR4_from_Gallazzi/gal_info_dr4_v5_1b.fit.gz')
+    shipley = Table.read('output/tables/nbCGs_with-Shipley-mass.fits')
+    fitted = Table.read(
+        'output/tables/nbCGs_integrated-logM-logZ-from-fitting.fits')
     
-    masses = Table.read('catalogs/SDSS_DR4_from_Gallazzi/all_stat_mstar.dat.gz',
-                        format='ascii.no_header')
-    masses.rename_column('col1', 'PLATEID')
-    masses.rename_column('col2', 'MJD')
-    masses.rename_column('col3', 'FIBERID')
-    masses.rename_column('col4', 'MASS_P2P5')
-    masses.rename_column('col5', 'MASS_P16')
-    masses.rename_column('col6', 'MASS_P50')
-    masses.rename_column('col7', 'MASS_P84')
-    masses.rename_column('col8', 'MASS_P97P5')
-    del masses['col9']
-    del masses['col10']
+    fittedMass, shipleyMass = fitted['logM'], shipley['logM']
     
-    metallicities = Table.read('catalogs/SDSS_DR4_from_Gallazzi/all_stat_z_log.dat.gz',
-                               format='ascii.no_header')
-    metallicities.rename_column('col1', 'PLATEID')
-    metallicities.rename_column('col2', 'MJD')
-    metallicities.rename_column('col3', 'FIBERID')
-    metallicities.rename_column('col4', 'METALLICITY_P2P5')
-    metallicities.rename_column('col5', 'METALLICITY_P16')
-    metallicities.rename_column('col6', 'METALLICITY_P50')
-    metallicities.rename_column('col7', 'METALLICITY_P84')
-    metallicities.rename_column('col8', 'METALLICITY_P97P5')
-    del metallicities['col9']
-    del metallicities['col10']
+    mask = ~np.isnan(fittedMass)
+    shipleyMass, fittedMass = shipleyMass[mask], fittedMass[mask]
     
-    # convert the metallicities into solar values
-    # metallicities['METALLICITY_P2P5'] = metallicities['METALLICITY_P2P5'] - np.log10(0.02)
-    # metallicities['METALLICITY_P16'] = metallicities['METALLICITY_P16'] - np.log10(0.02)
-    # metallicities['METALLICITY_P50'] = metallicities['METALLICITY_P50'] - np.log10(0.02)
-    # metallicities['METALLICITY_P84'] = metallicities['METALLICITY_P84'] - np.log10(0.02)
-    # metallicities['METALLICITY_P97P5'] = metallicities['METALLICITY_P97P5'] - np.log10(0.02)
+    popt, pcov = curve_fit(core.linear, shipleyMass, fittedMass - shipleyMass)
+        # p0=[0.4, 8, 0.5] # initial parameters for `core.exp` curve
     
-    derived = join(masses, metallicities, keys=['PLATEID', 'MJD', 'FIBERID'])
-    final = join(info, derived, keys=['PLATEID', 'MJD', 'FIBERID'])
-    del final['PHOTOID']
-    del final['RA']
-    del final['DEC']
-    del final['PLUG_MAG']
-    del final['PRIMTARGET']
-    del final['SECTARGET']
-    del final['TARGETTYPE']
-    del final['SPECTROTYPE']
-    del final['SUBCLASS']
-    del final['Z']
-    del final['Z_ERR']
-    del final['Z_WARNING']
-    del final['V_DISP']
-    del final['V_DISP_ERR']
-    del final['E_BV_SFD']
-    del final['ZTWEAK']
-    del final['ZTWEAK_ERR']
-    del final['SPECTRO_MAG']
-    del final['KCOR_MAG']
-    del final['KCOR_MODEL_MAG']
-    del final['RELEASE']
-    # final = final[final['METALLICITY_P50'] > -2]
-    # final = final[final['SN_MEDIAN'] > 20]
+    xs = np.linspace(8.3, 11.5, 1000)
+    ys = core.linear(xs, *popt)
     
-    if save :
-        final.write('output/MZR_alt.fits')
+    # compare the masses from the Shipley table to the integrated fitted ones
+    plt.plot_simple_multi([shipleyMass, xs], [fittedMass - shipleyMass, ys],
+                          ['', 'fit'], ['k', 'r'], ['o', ''], ['', '-'],
+                          xlabel=r'$\log(M/M_{\odot})_{\rm DeepSpace}$',
+                          ylabel=(r'$\log(M/M_{\odot})_{\rm fit} - ' +
+                                  r'\log(M/M_{\odot})_{\rm DeepSpace}$'),
+                          scale='linear')#,
+                          # xmin=8, xmax=11.4, ymin=-0.4, ymax=0.7)
+    
+    # compare the mass from the Shipley table to the integrated fitted ones
+    # including a correction based on the exponential fit above
+    y_correction = core.linear(shipleyMass, *popt)
+    plt.plot_simple_multi([shipleyMass + y_correction, xs], [fittedMass, xs],
+                          ['', 'equality'], ['k', 'r'], ['o', ''], ['', '--'],
+                          xlabel=r'$\log(M/M_{\odot})_{\rm DeepSpace, corrected}$',
+                          ylabel=r'$\log(M/M_{\odot})_{\rm fit}$',
+                          scale='linear',
+                          xmin=8.3, xmax=11.5, ymin=8.3, ymax=11.5)
+    
+    # compare the histograms of the masses from the Shipley table to the
+    # integrated fitted ones
+    plt.histogram_multi([fittedMass, shipleyMass], r'$\log(M/M_{\odot})$',
+                        [20, 20], colors=['k', 'r'],
+                        labels=['fit', 'DeepSpace'], styles=['-', '-'],
+                        histtype='step', loc=2)
+    
+    # investigate the histogram of the integrated fitted metallicities
+    plt.histogram(fitted['avglogZ'],
+                  r'$\langle \log(Z/Z_{\odot}) \rangle_{L}$',
+                  bins=20, histtype='step')
     
     return
 
-def tanh(xx, aa, bb, cc, dd) :
-    return aa + bb*np.tanh((xx - cc)/dd)
-
-def determine_medians(infile='output/MZR_with_SFR.fits') :
+def determine_expected_integrated_logZ() :
     
-    table = Table.read(infile) # MZR uses the metallicities from Gallazzi+2005
-        # based on DR4, but updated total mass estimates from fits to DR7
-        # photometry
+    infile = 'output/tables/Gallazzi_SDSS_mass-metallicity_with_SFR.fits'    
+    sdss = Table.read(infile) # uses the metallicities from Gallazzi+2005
+        # based on SDSS DR4, but updated total mass estimates from fits to DR7
+        # photometry, along with SFRs from DR7
     
     # mask the data based on reasonable stellar masses
-    table = table[table['MASS_P50'] > 8]
+    sdss = sdss[sdss['MASS_P50'] > 8]
     
-    # mask the table based on reasonable metallicities
-    table = table[table['METALLICITY_P50'] - np.log10(0.02) > -2]
+    # mask the table based on reasonable solar metallicities
+    sdss = sdss[sdss['METALLICITY_P50'] - np.log10(0.02) > -2]
     
     # mask the table based on SFR
-    table = table[table['SFR_P50'] > -99]
+    sdss = sdss[sdss['SFR_P50'] > -99]
     
-    # mask the table based on sSFR
-    table = table[table['SFR_P50'] - table['MASS_P50'] < -11]
+    # mask the table based on sSFR (ie. to select quiescent galaxies)
+    sdss = sdss[sdss['SFR_P50'] - sdss['MASS_P50'] < -11]
     
     # now select only galaxies with sufficient signal to noise in their pixels
     # table = table[table['SN_MEDIAN'] > 3]
     
     # populate values from the table
-    mass = table['MASS_P50']
-    metal = table['METALLICITY_P50'] - np.log10(0.02) # convert to solar values
+    mass = sdss['MASS_P50']
+    metal = sdss['METALLICITY_P50'] - np.log10(0.02) # convert to solar values
     
     # define the edges for the mass bins
     edges = [8, 8.2, 8.4, 8.6, 8.8, 9, 9.2, 9.4, 9.6, 9.8,
@@ -132,152 +111,229 @@ def determine_medians(infile='output/MZR_with_SFR.fits') :
         his.append(hi)
         larges.append(large)
     
-    popt, pcov = curve_fit(tanh, centers, medians,
+    centers = np.array(centers)
+    los, medians, his = np.array(los), np.array(medians), np.array(his)
+    
+    popt, pcov = curve_fit(core.tanh, centers[centers > 8.7],
+                           medians[centers > 8.7],
                            p0=[-0.452, 0.572, 9.66, 1.04]) # initial parameters
         # come from Panter+2008, MNRAS, 391, 1117
     
-    # y_model = tanh(centers, *popt)
+    fitx = np.linspace(8, 12, 4001)
+    fity = core.tanh(fitx, *popt)
     
-    xs = np.linspace(8, 12, 1000)
-    ys = tanh(xs, *popt)
+    HFF = Table.read(
+        'output/tables/nbCGs_integrated-logM-logZ-from-fitting.fits')
     
-    if not os.path.isfile('output/HFF_integrated_logM_and_logZ.fits') :
-        all_masses_and_metallicities()
-        HFF = {}
-        HFF['logM'], HFF['avglogZ'] = [0], [0]
-    else :
-        HFF = Table.read('output/HFF_integrated_logM_and_logZ.fits')
-    
-    plt.histogram_2d(mass, metal, [20, 20], centers,
-                     [tinies, los, medians, his, larges], xs, ys,
-                     HFF['logM'], HFF['avglogZ'], ['fit', 'HFF'],
-                     xlabel=r'$\log(M/M_{\odot})$', ylabel=r'$\log(Z/Z_{\odot})$',
+    # plot the Gallazzi relation for quiescent galaxies, and overplot
+    # the integrated values from the zeroth fitting run, ie. integrated values
+    # from using the `params_earlyJan2022.py` file
+    plt.histogram_2d(mass, metal, HFF['logM'], HFF['avglogZ'],
+                     [centers, centers, centers, centers, centers],
+                     [tinies, los, medians, his, larges],
+                     [fitx], [fity], ['', 'fit', '', 'HFF'],
+                     [':', '--', '-', '--', ':'],
+                     xlabel=r'$\log(M/M_{\odot})$',
+                     ylabel=r'$\log(Z/Z_{\odot})$',
                      xmin=8, xmax=12, ymin=-1.6, ymax=0.4)
+    
+    # now fit the +/- 1 sigma lines using galaxies with logM > 8.7
+    popt_lo, pcov_16 = curve_fit(core.tanh, centers[centers > 8.7],
+                                 los[centers > 8.7],
+                                 p0=[-0.53348847, 0.46418104,
+                                      9.72088385, 0.93802711])
+    fity_lo = core.tanh(fitx, *popt_lo)
+    
+    popt_hi, pcov_hi = curve_fit(core.tanh, centers[centers > 8.7],
+                                 his[centers > 8.7],
+                                 p0=[0.02577337, 0.24113023,
+                                     9.9563868,  1.34806179])
+    fity_hi = core.tanh(fitx, *popt_hi)
+    
+    # we'll use the maximum offset as the offset on either side
+    sigma = np.maximum(fity_hi - fity, fity - fity_lo)
+    
+    # now plot the derived relations with the fitted relations
+    plt.plot_simple_multi([centers, centers, centers, centers, centers,
+                           fitx, fitx, fitx, fitx, fitx],
+                          [tinies, los, medians, his, larges,
+                           fity_lo, fity, fity_hi, fity - sigma, fity + sigma],
+                          ['', '', '', '', '', '', r'${\rm fit}_{16/50/84th}$',
+                           '', r'${\rm fit}_{50th} \pm \sigma$', ''],
+                          ['k', 'k', 'k', 'k', 'k',
+                           'r', 'r', 'r', 'b', 'b'],
+                          ['', '', '', '', '',
+                           '', '', '', '', ''],
+                          [':', '--', '-', '--', ':',
+                           '-', '-', '-', '--', '--'],
+                          xlabel=r'$\log(M/M_{\odot})$',
+                          ylabel=r'$\log(Z/Z_{\odot})$',
+                          xmin=8, xmax=12, ymin=-1.6, ymax=0.4, scale='linear',
+                          loc=4)
+    
+    # now use the fitted relations above to derive expected values for the HFF
+    shipley = Table.read('output/tables/nbCGs_with-Shipley-mass.fits')
+    
+    expected = core.tanh(shipley['logM'], *popt)
+    expected_lo = core.tanh(shipley['logM'], *popt_lo)
+    expected_hi = core.tanh(shipley['logM'], *popt_hi)
+    
+    shipley['GallazzilogZ'] = expected
+    shipley['sigma'] = np.maximum(expected_hi-expected, expected-expected_lo)
+    # shipley.write('output/tables/nbCGs_GallazzilogZ_from-Shipley-mass.fits')
     
     return
 
-def all_masses_and_metallicities() :
+def estimate_gradient_from_literature() :
     
-    clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
+    califa_logM_lo = np.array([10.6, 10.5, 10.3])
+    califa_logM_hi = np.array([11.8, 11.9, 11.9])
     
-    all_clus, all_IDs, all_masses, all_metallicities = [], [], [], []
-    for cluster in clusters :
-        (clusterID, IDs, masses,
-         metallicities) = luminosity_weighted_average_metallicity(cluster)
-        
-        for clus in clusterID :
-            all_clus.append(clus)
-        
-        for ID in IDs :
-            all_IDs.append(ID)
-        
-        for mass in masses :
-            all_masses.append(mass)
-        
-        for metallicity in metallicities :
-            all_metallicities.append(metallicity)
+    califa_result = np.array([-0.1, -0.248, -0.2])
+    califa_extent = np.array([1, 1, 2])
     
-    table = Table([all_clus, all_IDs, all_masses, all_metallicities],
-                  names=('cluster', 'ID', 'logM', 'avglogZ'))
-    table.write('output/HFF_integrated_logM_and_logZ.fits')
+    sami_logM_lo = np.array([9.6, 9.5])
+    sami_logM_hi = np.array([11.7, 11.7])
     
-    return 
+    sami_result = np.array([-0.31, -0.275])
+    sami_extent = np.array([5, 2])
+    
+    manga_logM_lo = np.array([9, 9, 8.4, 9.1, 9.9, 9.9,
+                              10.9, 9.5, 8.8, 9, 9.4])
+    manga_logM_hi = np.array([11.9, 11.9, 11.9, 13.1, 10.8, 10.8,
+                              12, 11.9, 11.3, 11.8, 12])
+    
+    manga_result = np.array([-0.12, -0.11, -0.09, -0.102, -0.14, -0.104,
+                             -0.202, -0.112, -0.106, -0.092, -0.18])
+    manga_extent = np.array([1.5, 1.5, 2, 1, 1, 1,
+                             1, 1.5, 1.5, 1, 1])
+    
+    logM = np.concatenate([califa_logM_lo, sami_logM_lo, manga_logM_lo])
+    results = np.concatenate([califa_result, sami_result, manga_result])
+    
+    xhi = np.concatenate([califa_logM_hi, sami_logM_hi, manga_logM_hi]) - logM
+    xerr = np.array([np.zeros(xhi.shape), xhi])
+    
+    extents = np.concatenate([califa_extent, sami_extent, manga_extent])
+    
+    plt.plot_scatter_err(logM, results, xerr, extents, 'o',
+                         cbar_label=r'$R_{\rm e}$ extent',
+                         xlabel=r'Mass Range $(\log M/M_{\odot})$',
+                         ylabel=r'$\nabla \log(Z/Z_{\odot})$')
+    
+    plt.plot_scatter(extents, results, logM, '', 'o',
+                     cbar_label=r'Lowest Mass $(\log M/M_{\odot})$',
+                     xlabel=r'$R_{\rm e}$ extent',
+                     ylabel=r'$\nabla \log(Z/Z_{\odot})$')
+    
+    return
 
-def luminosity_weighted_average_metallicity(cluster) :
+def luminosity_weighted_average_metallicity() :
     
-    paths = '{}/spatial_result_images/{}_ID_*_logZ.fits'.format(cluster, cluster)
-    images = glob.glob(paths)
+    HFF = Table.read('output/tables/nbCGs.fits')
     
-    clusters, IDs, masses, metallicities = [], [], [], []
-    for image in images :
-        file = image.replace(os.sep, '/') # compatibility for Windows
-        ID = int(file.split('_')[4]) # the galaxy ID
-        
-        with fits.open(file) as hdu :
-            metal_image = hdu[0].data
-        
-        # get F160W cutout for luminosity-weighting
-        flux = open_cutout('{}/cutouts/{}_ID_{}_f160w.fits'.format(cluster, cluster, ID),
-                           simple=True)
-        segmap = open_cutout('{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster, ID),
-                             simple=True)
-        
-        new_sci = flux.copy()
-        new_sci[(segmap >= 0) & (segmap != ID)] = 0 # mask out the background
-            # and pixels associated with other galaxies
-        
-        flux_fraction = new_sci/np.sum(new_sci)
-        
-        average_metallicity = np.nansum(flux_fraction*metal_image)
-        metallicities.append(average_metallicity)
-        
-        with fits.open(file.replace('Z', 'M')) as hdu :
-            mass_image = hdu[0].data
-        
-        total_mass = np.log10(np.nansum(mass_image))
-        masses.append(total_mass)
-        
-        clusters.append(cluster)
-        IDs.append(ID)
+    masses, metallicities = [], []
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        if (cluster == 'm717') & (ID == 3692) : # fitting issue for bin_4
+            masses.append(np.nan)
+            metallicities.append(np.nan)    
+        else :
+            mass_image = core.open_image(cluster, ID, 'logM')
+            masses.append(np.log10(np.nansum(mass_image)))
+            
+            fluxfrac = core.open_image(cluster, ID, 'fluxfrac')
+            metal_image = core.open_image(cluster, ID, 'logZ')
+            metallicities.append(np.nansum(fluxfrac*metal_image))
     
-    return clusters, IDs, masses, metallicities
+    HFF['logM'] = masses
+    HFF['avglogZ'] = metallicities
+    HFF.write('output/tables/nbCGs_integrated-logM-logZ-from-fitting_NEW.fits')
+    
+    return
 
-def construct_images(cluster, disallowed_IDs, selection) :
+def metallicity_normalization_estimation() :
     
-    if selection == 'mass' :
-        index, string = 1, 'logM'
-    if selection == 'metallicity' :
-        index, string = 2, 'logZ'
+    HFF = Table.read(
+        'output/tables/nbCGs_GallazzilogZ_from-Shipley-mass.fits')
     
-    os.makedirs('{}/spatial_result_images'.format(cluster), exist_ok=True)
-        # ensure the output directory for the metallicity images is available
+    vals = []
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        mask = (HFF['cluster'] == cluster) & (HFF['ID'] == ID)
+        vals.append(metallicity_normalization_helper(
+            cluster, ID, HFF['GallazzilogZ'][mask][0]))
     
-    phot_paths = '{}/photometry/{}_ID_*_photometry.fits'.format(cluster,
-                                                                cluster)
-    phots = glob.glob(phot_paths)
+    plt.plot_scatter(HFF['logM'], HFF['GallazzilogZ'] - np.array(vals),
+                     HFF['bins'], 'HFF', 'o', cbar_label='Number of Annuli',
+                     xlabel=r'$\log(M/M_{\odot})$',
+                     ylabel=r'$\Delta \langle \log(Z/Z_{\odot}) \rangle$',
+                     xmin=7.9, xmax=11.5, loc=2)
     
-    for file in phots :
-        file = file.replace(os.sep, '/') # compatibility for Windows
-        ID = int(file.split('_')[2]) # the galaxy ID
+    offset = HFF['GallazzilogZ'] - np.array(vals)
+    
+    finals = []
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        mask = (HFF['cluster'] == cluster) & (HFF['ID'] == ID)
+        finals.append(metallicity_normalization_helper(
+            cluster, ID, HFF['GallazzilogZ'][mask][0] + offset[mask]))
+    
+    plt.plot_scatter(HFF['logM'], HFF['GallazzilogZ'] - np.array(finals),
+                     HFF['bins'], 'HFF', 'o', cbar_label='Number of Annuli',
+                     xlabel=r'$\log(M/M_{\odot})$',
+                     ylabel=r'$\Delta \langle \log(Z/Z_{\odot}) \rangle$',
+                     xmin=7.9, xmax=11.5, loc=2)
+    
+    HFF['centrallogZ'] = HFF['GallazzilogZ'] + offset
+    # HFF.write('output/tables/nbCGs_GallazzilogZ_from-Shipley-mass_final.fits')
+    
+    return
+
+def metallicity_normalization_helper(cluster, ID, central_value) :
+    
+    metal_image = core.open_image(cluster, ID, 'bins')
+    fluxfrac = core.open_image(cluster, ID, 'fluxfrac')
+    
+    table = Table.read('{}/photometry/{}_ID_{}_photometry.fits'.format(
+        cluster, cluster, ID))
+    radii = np.array((table['sma'] - table['width'])*np.sqrt(
+        table['smb']/table['sma'])/table['R_e'])
+    
+    for binNum, radius in zip(table['bin'], radii) :
+        metal_image[metal_image == binNum] = central_value - 0.1*radius
+    
+    return np.nansum(fluxfrac*metal_image)
+
+def save_mass_metallicity_images() :
+    
+    HFF = Table.read('output/tables/nbCGs.fits')
+    
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        # ensure the output directories for the images are available
+        os.makedirs('{}/logM_images'.format(cluster), exist_ok=True)
+        os.makedirs('{}/logZ_images'.format(cluster), exist_ok=True)
         
-        if (ID not in disallowed_IDs) :
-            table = Table.read(file)
-            
-            bin_data = np.load('{}/bins/{}_ID_{}_annuli.npz'.format(cluster, cluster, ID))
-            
-            bins_image = bin_data['image']
-            
-            bins = table['bin'] # get a list of bin values
-            for binNum in bins : # loop over all the bins in the table
-                infile = '{}/h5/{}_ID_{}_bin_{}.h5'.format(cluster, cluster,
-                                                           ID, binNum)
-                
-                result, obs, _ = reader.results_from(infile, dangerous=True)
+        bins_image = core.open_image(cluster, ID, 'bins')
+        bins = np.sort(np.unique(bins_image[~np.isnan(bins_image)])).astype(int)
+        
+        mass = bins_image.copy()
+        metal = bins_image.copy()
+        
+        if not (cluster == 'm717') & (ID == 3692) : # fitting issue for bin_4
+            for binNum in bins : # loop over all the bins
+                result, obs, _ = reader.results_from(
+                    '{}/h5/{}_ID_{}_bin_{}.h5'.format(
+                        cluster, cluster, ID, binNum), dangerous=True)
                 samples = sample_posterior(result['chain'],
                                            weights=result['weights'])
                 
-                median = np.percentile(samples[:, index], 50)
-                
-                bins_image[bins_image == binNum] = median
+                mass[mass == binNum] = np.percentile(samples[:, 1], 50)
+                metal[metal == binNum] = np.percentile(samples[:, 2], 50)
             
-            hdu = fits.PrimaryHDU(bins_image)
-            outfile = '{}/spatial_result_images/{}_ID_{}_{}.fits'.format(cluster, cluster,
-                                                                         ID, string)
-            hdu.writeto(outfile)
+            hdu = fits.PrimaryHDU(mass)
+            hdu.writeto('{}/logM_images/{}_ID_{}_logM.fits'.format(
+                cluster, cluster, ID))
+            
+            hdu = fits.PrimaryHDU(metal)
+            hdu.writeto('{}/logZ_images/{}_ID_{}_logZ.fits'.format(
+                cluster, cluster, ID))
     
     return
-
-# construct_images('a370', [3826, 4094, 4966, 5069], 'mass')
-# construct_images('a370', [3826, 4094, 4966, 5069], 'metallicity')
-# construct_images('a1063', [], 'mass')
-# construct_images('a1063', [], 'metallicity')
-# construct_images('a2744', [6727], 'mass')
-# construct_images('a2744', [6727], 'metallicity')
-# construct_images('m416', [3594, 3638, 5413], 'mass')
-# construct_images('m416', [3594, 3638, 5413], 'metallicity')
-# construct_images('m717', [1358, 2774, 3692, 3731, 4784, 4814, 5216], 'mass')
-# construct_images('m717', [1358, 2774, 3692, 3731, 4784, 4814, 5216], 'metallicity')
-# construct_images('m1149', [2436, 2978, 3751, 5808], 'mass')
-# construct_images('m1149', [2436, 2978, 3751, 5808], 'metallicity')
-
-# determine_medians()

@@ -183,7 +183,7 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     photometry.determine_fluxes(cluster, filters, subpop)
     if verbose :
         print('Saved: Photometries to fits files.')
-    '''
+    
     # plot and save the surface brightness profiles for every filter, using
     # the photometry file saved above
     checks.save_sbps(cluster, population)
@@ -201,13 +201,61 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     checks.save_bkgshists(cluster, filters, population)
     if verbose :
         print('Saved: Background pixel histograms to file.')
-    '''
+    
     # END
     if verbose :
         print('\n{} complete.'.format(cluster))
     
     # then on linux, move to the `hff/` directory, and run
     # python prospector.py
+    
+    '''
+    Note: the sample as determined above from the `determine_finalObjs_w_color`
+    function returns 421 non-bCG quiescent cluster galaxies.
+    
+    Of these, 6 should be removed in the step performed by the
+    `combine_with_issues` function, as these galaxies all have incomplete
+    F160W coverage, and so reliable bins/annuli cannot be determined. These
+    galaxies are:
+    M717 ID 3503 (14 bins from erroneously including it previously)
+    M717 ID 3896 (4 bins)
+    M717 ID 4819 (14 bins)
+    M717 ID 5357 (14 bins)
+    M1149 ID 1678 (8 bins)
+    M1149 ID 2737 (10 bins)
+    
+    Following this, 12 should be further removed in the step performed by the
+    `binning.bin_all` function, as these galaxies are all too dim to have even
+    a single bin/annulus determined. These galaxies are:
+    A1063 ID 3089
+    A1063 ID 3426
+    A1063 ID 4556
+    A1063 ID 4746
+    A1063 ID 4751
+    A1063 ID 4755
+    A1063 ID 5090
+    A1063 ID 5188
+    A1063 ID 5397
+    A1063 ID 5638
+    A1063 ID 5806
+    A2744 ID 4358
+    
+    Lastly, 10 should be finally removed manually, as these galaxies all have
+    only a single bin/annulus. These galaxies are:
+    A1063 ID 2601
+    A1063 ID 2959
+    A1063 ID 3221
+    A1063 ID 3312
+    A1063 ID 3486
+    A1063 ID 4377
+    A1063 ID 4475
+    A1063 ID 5083
+    A2744 ID 3892
+    A2744 ID 4655
+    
+    This results in 393 galaxies that should be in the final sample for the
+    non-bCG quiescent cluster galaxies.
+    '''
     
     return
 

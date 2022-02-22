@@ -17,16 +17,16 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     zobs = table['z'][binNum]
     max_age = cosmo.age(zobs).value
     
-    sma, smb = table['sma'][binNum], table['smb'][binNum]
-    R_e, width = table['R_e'][binNum], table['width'][binNum]
-    radius = (sma - width)*np.sqrt(smb/sma)/R_e
+    # sma, smb = table['sma'][binNum], table['smb'][binNum]
+    # R_e, width = table['R_e'][binNum], table['width'][binNum]
+    # radius = (sma - width)*np.sqrt(smb/sma)/R_e
     
     metallicities = Table.read(metalfile)
     idx = np.where((metallicities['cluster'] == cluster) &
                    (metallicities['ID'] == ID))[0][0]
     central_metallicity = metallicities['centrallogZ'][idx]
     sigma_metallicity = metallicities['sigma'][idx]
-    init_metallicity = central_metallicity - 0.1*radius
+    init_metallicity = central_metallicity # - 0.1*radius
     
     model_params = TemplateLibrary['parametric_sfh'] # delay-tau model
     
@@ -147,7 +147,7 @@ if __name__ == '__main__' :
     cluster, _, ID, _ = run_params['infile'].split('/')[-1].split('_')
     run_params['cluster'], run_params['ID'] = cluster, int(ID)
     
-    outfile = '{}/h5/{}_ID_{}_bin_{}_gradient'.format(cluster, cluster, ID, binNum)
+    outfile = '{}/h5/{}_ID_{}_bin_{}_flat'.format(cluster, cluster, ID, binNum)
     run_params['outfile'] = outfile
     
     obs, model, sps, noise = build_all(**run_params)

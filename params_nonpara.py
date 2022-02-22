@@ -8,14 +8,14 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     
     import numpy as np
     from astropy.table import Table
-    from prospect.models.priors import ClippedNormal, LogUniform, TopHat
+    from prospect.models.priors import ClippedNormal, StudentT, TopHat
     from prospect.models.sedmodel import SedModel
     from prospect.models.templates import TemplateLibrary
     from prospect.sources.constants import cosmo
     
     table = Table.read(infile)
     zobs = table['z'][binNum]
-    max_age = cosmo.age(zobs).value
+    max_age, nbins = cosmo.age(zobs).value, 10
     
     sma, smb = table['sma'][binNum], table['smb'][binNum]
     R_e, width = table['R_e'][binNum], table['width'][binNum]
@@ -28,14 +28,15 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     sigma_metallicity = metallicities['sigma'][idx]
     init_metallicity = central_metallicity - 0.1*radius
     
-    model_params = TemplateLibrary['parametric_sfh'] # delay-tau model
+    model_params = TemplateLibrary['continuity_sfh'] # non-parametric model
     
     model_params['zred']['init'] = zobs
     model_params['zred']['isfree'] = bool(fit_redshift)
     model_params['zred']['prior'] = TopHat(mini=zobs-0.01, maxi=zobs+0.01)
     
-    model_params['mass']['init'] = 1e7
-    model_params['mass']['prior'] = LogUniform(mini=1e5, maxi=1e10)
+    model_params['logmass']['init'] = 7
+    model_params['logmass']['prior'] = TopHat(mini=5, maxi=10)
+    model_params['mass']['N'] = nbins
     
     model_params['logzsol']['init'] = init_metallicity
     model_params['logzsol']['isfree'] = bool(fit_metallicity)
@@ -46,11 +47,22 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     model_params['dust2']['init'] = 0.3
     model_params['dust2']['prior'] = TopHat(mini=0.0, maxi=2.0)
     
-    model_params['tage']['init'] = 6.24
-    model_params['tage']['prior'] = TopHat(mini=0.001, maxi=max_age)
+    model_params['agebins']['N'] = nbins
+    begin = np.array([1e-9, 0.03, 0.1, 0.5])
+    middle = np.linspace(1, 0.95*max_age, 6)
+    end = np.array([max_age])
+    edges_list = np.log10(np.concatenate([begin, middle, end])) + 9
+    edges = []
+    for i, j in zip(edges_list, edges_list[1:]) :
+        edges.append([i, j])
+    model_params['agebins']['init'] = edges
     
-    model_params['tau']['init'] = 0.29
-    model_params['tau']['prior'] = LogUniform(mini=0.1, maxi=10)
+    mean = np.zeros(nbins - 1)
+    model_params['logsfr_ratios']['N'] = nbins - 1
+    model_params['logsfr_ratios']['init'] = mean
+    model_params['logsfr_ratios']['prior'] = StudentT(mean=mean,
+                                                      scale=0.3*np.ones(nbins - 1),
+                                                      df=2*np.ones(nbins - 1))
     
     model_params['imf_type']['init'] = 1 # Chabrier (2003) IMF
     model_params['dust_type']['init'] = 1 # Cardelli+ (1989) MW extinction
@@ -110,8 +122,8 @@ def build_obs(binNum=0, infile=None, **extras) :
     return obs
 
 def build_sps(**extras) :
-    from prospect.sources import CSPSpecBasis
-    sps = CSPSpecBasis(zcontinuous=1, compute_vega_mags=False)
+    from prospect.sources import FastStepBasis
+    sps = FastStepBasis(zcontinuous=1, compute_vega_mags=False)
     return sps
 
 if __name__ == '__main__' :
@@ -147,7 +159,7 @@ if __name__ == '__main__' :
     cluster, _, ID, _ = run_params['infile'].split('/')[-1].split('_')
     run_params['cluster'], run_params['ID'] = cluster, int(ID)
     
-    outfile = '{}/h5/{}_ID_{}_bin_{}_gradient'.format(cluster, cluster, ID, binNum)
+    outfile = '{}/h5/{}_ID_{}_bin_{}'.format(cluster, cluster, ID, binNum)
     run_params['outfile'] = outfile
     
     obs, model, sps, noise = build_all(**run_params)

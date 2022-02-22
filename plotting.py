@@ -273,7 +273,7 @@ def display_image_simple(data, bad='black', cbar_label='', cmap=cm.gray,
     return
 
 def histogram(data, label, title=None, bins=None, log=False, histtype='bar',
-              vlines=[], colors=[], labels=[]) :
+              vlines=[], colors=[], labels=[], loc='upper left') :
     
     global currentFig
     fig = plt.figure(currentFig)
@@ -304,7 +304,7 @@ def histogram(data, label, title=None, bins=None, log=False, histtype='bar',
     ax.set_title(title, fontsize=18)
     
     if len(vlines) > 0 :
-        ax.legend(loc='upper left', facecolor='whitesmoke', framealpha=1,
+        ax.legend(loc=loc, facecolor='whitesmoke', framealpha=1,
                   fontsize=15)
     
     plt.tight_layout()
@@ -313,7 +313,7 @@ def histogram(data, label, title=None, bins=None, log=False, histtype='bar',
     return
 
 def histogram_multi(data, label, bins=[], log=False, histtype='step',
-                    colors=[], labels=[], styles=[],
+                    colors=[], labels=[], styles=[], loc='upper right',
                     xmin=None, xmax=None, ymin=None, ymax=None) :
     
     global currentFig
@@ -344,7 +344,7 @@ def histogram_multi(data, label, bins=[], log=False, histtype='step',
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(loc='upper right', facecolor='whitesmoke', framealpha=1,
+    ax.legend(loc=loc, facecolor='whitesmoke', framealpha=1,
               fontsize=15)
     
     plt.tight_layout()
@@ -352,9 +352,9 @@ def histogram_multi(data, label, bins=[], log=False, histtype='step',
     
     return
 
-def histogram_2d(xvals, yvals, bins, centers, lines, fitx, fity, datax, datay,
-                 labels, cmap=cm.Blues, bad='white', norm=LogNorm(),
-                 outfile=None, xlabel=None, ylabel=None,
+def histogram_2d(xhist, yhist, xscatter, yscatter, xs, ys, fitx, fity, labels,
+                 styles, bad='white', bins=[20,20], cmap=cm.Blues,
+                 norm=LogNorm(), outfile=None, xlabel=None, ylabel=None,
                  xmin=None, xmax=None, ymin=None, ymax=None, save=False) :
     
     global currentFig
@@ -366,23 +366,16 @@ def histogram_2d(xvals, yvals, bins, centers, lines, fitx, fity, datax, datay,
     cmap = copy.copy(cmap)
     cmap.set_bad(bad, 1)
     
-    ax.hist2d(xvals, yvals, bins=bins, range=[[xmin, xmax], [ymin, ymax]],
-              cmap=cmap, norm=norm)
+    ax.hist2d(xhist, yhist, bins=bins, range=[[xmin, xmax], [ymin, ymax]],
+              cmap=cmap, norm=norm, alpha=0.3)
     
-    if len(lines) == 1 :
-        styles = ['-']
-    elif len(lines) == 3 :
-        styles = ['--', '-', '--']
-    elif len(lines) == 5 :
-        styles = [':', '--', '-', '--', ':']
-    else :
-        print('Unknown length of `lines`.')
+    for i in range(len(ys)) :
+        ax.plot(xs[i], ys[i], styles[i], color='k')
     
-    for i in range(len(lines)) :
-        ax.plot(centers, lines[i], styles[i], color='k')
+    for i in range(len(fity)) :
+        ax.plot(fitx[i], fity[i], 'r-', label=labels[i])
     
-    ax.plot(fitx, fity, 'r-', label=labels[0])
-    ax.plot(datax, datay, 'ro', label=labels[1])
+    ax.plot(xscatter, yscatter, 'ro', label=labels[-1])
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -600,7 +593,7 @@ def plot_corner(samples, labels, npar, result, ranges=None,
     
     cornerfig = corner.corner(samples, labels=labels, range=ranges,
                               fig=plt.subplots(npar, npar,
-                                               figsize=(2*npar, 2*npar))[0],
+                                               figsize=(1.75*npar, 1.75*npar))[0],
                               fill_contours=True, plot_datapoints=False,
                               plot_density=False, quantiles=[0.16, 0.5, 0.84],
                               show_titles=True)
@@ -616,7 +609,7 @@ def plot_corner(samples, labels, npar, result, ranges=None,
 def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
                       list_of_ys, list_of_yerrs_lo, list_of_yerrs_hi,
                       list_of_best_ys, list_of_slopes, list_of_intercepts,
-                      q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z, V_J, FUV_V,
+                      q_xi, q_yi, q_z, sf_xi, sf_yi, sf_z, V_J, FUV_V, rgb,
                       labels='', xlabel=None, list_of_ylabels=None, title=None,
                       xmin=None, xmax=None, outfile=None, loc='best',
                       figsizewidth=16, figsizeheight=9, save=False) :
@@ -628,12 +621,13 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     
     spec = gridspec.GridSpec(ncols=2, nrows=3, figure=fig, width_ratios=[2, 1])
     
-    xs = np.linspace(xmin, xmax, 1000)
+    xs = np.linspace(0, xmax-0.05, 1000)
     
     ax1 = fig.add_subplot(spec[0, 0])
     ax2 = fig.add_subplot(spec[1, 0], sharex=ax1)
     ax3 = fig.add_subplot(spec[2, 0], sharex=ax1)
     ax4 = fig.add_subplot(spec[0:2, 1])
+    ax5 = fig.add_subplot(spec[2, 1])
     
     ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkred',
              label=labels[0])
@@ -689,9 +683,63 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     ax4.vlines(vert, slope*second_knee + intercept, 8.4,
                ls='-', color='k', zorder=5)
     
+    ax5.imshow(rgb, origin='lower')
+    
     ax1.set_title(title, fontsize=18)
     ax1.set_xlim(xmin, xmax)
     ax1.legend(loc=loc, facecolor='whitesmoke', framealpha=1, fontsize=11)
+    
+    plt.tight_layout()
+    
+    if save :
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.close()
+    else :
+        plt.show()
+    
+    return
+
+def plot_degens_small(xs, ys, lo, hi, labels, colors, styles,
+                      xlabel=None, ylabels=None, title=None,
+                      xmin=None, xmax=None, outfile=None,
+                      figsizewidth=9, figsizeheight=6, loc=0, save=False) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    
+    spec = gridspec.GridSpec(ncols=1, nrows=2, figure=fig)
+    
+    ax0 = fig.add_subplot(spec[0, 0])
+    ax1 = fig.add_subplot(spec[1, 0], sharex=ax0)
+    
+    for i in [0, 1] :
+        ax0.errorbar(xs[i], ys[i], yerr=(lo[i], hi[i]),
+                     color=colors[i], ecolor='k', elinewidth=0.7,
+                     linestyle=styles[i], marker='.', markeredgecolor='k',
+                     markerfacecolor='k', markersize=11, label=labels[i],
+                     zorder=3)
+    ax0.set_ylabel(ylabels[0], fontsize=15)
+    ax0.tick_params(axis='x', which='major', labelbottom=False)
+    
+    for i in [2, 3] :
+        ax1.errorbar(xs[i], ys[i], yerr=(lo[i], hi[i]),
+                     color=colors[i], ecolor='k', elinewidth=0.7,
+                     linestyle=styles[i], marker='.', markeredgecolor='k',
+                     markerfacecolor='k', markersize=11, label=labels[i],
+                     zorder=3)
+    ax1.set_ylabel(ylabels[2], fontsize=15)
+    ax1.set_xlabel(xlabel, fontsize=15)
+    
+    ax0.set_title(title, fontsize=18)
+    ax0.set_xlim(xmin, xmax)
+    if type(loc) == int :
+        ax0.legend(facecolor='whitesmoke', framealpha=1, fontsize=11,
+                   loc=loc)
+    else :
+        ax0.legend(facecolor='whitesmoke', framealpha=1, fontsize=11,
+                   loc='best', bbox_to_anchor=(loc[0], 0.8, loc[1], 0.2))
     
     plt.tight_layout()
     
@@ -1005,8 +1053,8 @@ def plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
     
     # ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
     
-    ax.annotate(r'$\chi^2_{\rm reduced}$ = ' + '{:.2f}'.format(chisq),
-                (0.75, 0.25), fontsize=15, xycoords='axes fraction')
+    # ax.annotate(r'$\chi^2_{\rm reduced}$ = ' + '{:.2f}'.format(chisq),
+    #             (0.75, 0.25), fontsize=15, xycoords='axes fraction')
     
     ax.set(xscale='log', yscale='log', xlim=(xmin, xmax), ylim=(ymin, ymax))
     
@@ -1023,6 +1071,71 @@ def plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
         plt.close()
     else :
         plt.show()
+    
+    return
+
+def plot_scatter(xs, ys, color, label, marker, cbar_label='',
+                 xlabel=None, ylabel=None, title=None, cmap=cm.rainbow,
+                 xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
+                 figsizewidth=9.5, figsizeheight=7, scale='linear') :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = copy.copy(cmap)
+    
+    frame = ax.scatter(xs, ys, c=color, marker=marker, label=label, cmap=cmap)
+    cbar = plt.colorbar(frame)
+    cbar.set_label(cbar_label, fontsize=15)
+    
+    ax.set_yscale(scale)
+    ax.set_xscale(scale)
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_scatter_err(xs, ys, xerr, color, marker, cbar_label='',
+                     xlabel=None, ylabel=None, title=None, cmap=cm.rainbow,
+                     xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
+                     figsizewidth=9.5, figsizeheight=7, scale='linear') :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = copy.copy(cmap)
+    
+    ax.errorbar(xs, ys, xerr=xerr, fmt='none', ecolor='k')
+    
+    frame = ax.scatter(xs, ys, c=color, marker=marker, cmap=cmap, zorder=3)
+    cbar = plt.colorbar(frame)
+    cbar.set_label(cbar_label, fontsize=15)
+    
+    ax.set_yscale(scale)
+    ax.set_xscale(scale)
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    
+    plt.tight_layout()
+    plt.show()
     
     return
 
@@ -1058,10 +1171,10 @@ def plot_simple(xs, ys, yerr, xerr=None, label='',
     
     return
 
-def plot_simple_multi(xs, ys, labels, colors,
+def plot_simple_multi(xs, ys, labels, colors, markers, styles,
                       xlabel=None, ylabel=None, title=None,
                       xmin=None, xmax=None, ymin=None, ymax=None,
-                      figsizewidth=9, figsizeheight=6) :
+                      figsizewidth=9.5, figsizeheight=7, scale='log', loc=0) :
     
     global currentFig
     fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
@@ -1070,17 +1183,19 @@ def plot_simple_multi(xs, ys, labels, colors,
     ax = fig.add_subplot(111)
     
     for i in range(len(xs)) :
-        ax.plot(xs[i], ys[i], 'o', color=colors[i], label=labels[i])
+        ax.plot(xs[i], ys[i], marker=markers[i], linestyle=styles[i],
+                color=colors[i], label=labels[i])
     
-    ax.set_yscale('log')
-    ax.set_xscale('log')
+    ax.set_yscale(scale)
+    ax.set_xscale(scale)
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
+    # if labels[0] != '' :
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
     
     plt.tight_layout()
     plt.show()
