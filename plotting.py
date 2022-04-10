@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 import corner
 from matplotlib import cm
-from matplotlib.colors import LogNorm
+from matplotlib.colors import LogNorm, Normalize
 import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
@@ -367,7 +367,7 @@ def histogram_2d(xhist, yhist, xscatter, yscatter, xs, ys, fitx, fity, labels,
     cmap.set_bad(bad, 1)
     
     ax.hist2d(xhist, yhist, bins=bins, range=[[xmin, xmax], [ymin, ymax]],
-              cmap=cmap, norm=norm, alpha=0.3)
+              cmap=cmap, norm=norm, alpha=0.7)
     
     for i in range(len(ys)) :
         ax.plot(xs[i], ys[i], styles[i], color='k')
@@ -375,7 +375,7 @@ def histogram_2d(xhist, yhist, xscatter, yscatter, xs, ys, fitx, fity, labels,
     for i in range(len(fity)) :
         ax.plot(fitx[i], fity[i], 'r-', label=labels[i])
     
-    ax.plot(xscatter, yscatter, 'ro', label=labels[-1])
+    # ax.plot(xscatter, yscatter, 'ro', label=labels[-1])
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -591,9 +591,11 @@ def plot_corner(samples, labels, npar, result, ranges=None,
                                       range=ranges)
     '''
     
+    figsize_x, figsize_y = 1.75*npar, 1.75*npar
+    
     cornerfig = corner.corner(samples, labels=labels, range=ranges,
                               fig=plt.subplots(npar, npar,
-                                               figsize=(1.75*npar, 1.75*npar))[0],
+                                               figsize=(figsize_x, figsize_y))[0],
                               fill_contours=True, plot_datapoints=False,
                               plot_density=False, quantiles=[0.16, 0.5, 0.84],
                               show_titles=True)
@@ -629,10 +631,10 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     ax4 = fig.add_subplot(spec[0:2, 1])
     ax5 = fig.add_subplot(spec[2, 1])
     
-    ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkred',
-             label=labels[0])
-    ax1.plot(xs, list_of_slopes[0]*xs + list_of_intercepts[0], ':',
-             color='maroon', label=labels[1])
+    # ax1.plot(list_of_xs[0], list_of_best_ys[0], '--', color='darkred',
+    #          label=labels[0])
+    # ax1.plot(xs, list_of_slopes[0]*xs + list_of_intercepts[0], ':',
+    #          color='maroon', label=labels[1])
     ax1.errorbar(list_of_xs[0], list_of_ys[0],
                  xerr=(list_of_xerrs_lo[0], list_of_xerrs_hi[0]),
                  yerr=(list_of_yerrs_lo[0], list_of_yerrs_hi[0]),
@@ -642,9 +644,9 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     ax1.set_ylabel(list_of_ylabels[0], fontsize=15)
     ax1.tick_params(axis='x', which='major', labelbottom=False)
     
-    ax2.plot(list_of_xs[1], list_of_best_ys[1], '--', color='darkblue')
-    ax2.plot(xs, list_of_slopes[1]*xs + list_of_intercepts[1], ':',
-             color='navy')
+    # ax2.plot(list_of_xs[1], list_of_best_ys[1], '--', color='darkblue')
+    # ax2.plot(xs, list_of_slopes[1]*xs + list_of_intercepts[1], ':',
+    #          color='navy')
     ax2.errorbar(list_of_xs[1], list_of_ys[1],
                  xerr=(list_of_xerrs_lo[1], list_of_xerrs_hi[1]),
                  yerr=(list_of_yerrs_lo[1], list_of_yerrs_hi[1]),
@@ -654,8 +656,8 @@ def plot_degeneracies(list_of_xs, list_of_xerrs_lo, list_of_xerrs_hi,
     ax2.set_ylabel(list_of_ylabels[1], fontsize=15)
     ax2.tick_params(axis='x', which='major', labelbottom=False)
     
-    ax3.plot(list_of_xs[2], list_of_best_ys[2], '--', color='darkgrey')
-    ax3.plot(xs, list_of_slopes[2]*xs + list_of_intercepts[2], ':', color='k')
+    # ax3.plot(list_of_xs[2], list_of_best_ys[2], '--', color='darkgrey')
+    # ax3.plot(xs, list_of_slopes[2]*xs + list_of_intercepts[2], ':', color='k')
     ax3.errorbar(list_of_xs[2], list_of_ys[2],
                  xerr=(list_of_xerrs_lo[2], list_of_xerrs_hi[2]),
                  yerr=(list_of_yerrs_lo[2], list_of_yerrs_hi[2]),
@@ -739,7 +741,7 @@ def plot_degens_small(xs, ys, lo, hi, labels, colors, styles,
                    loc=loc)
     else :
         ax0.legend(facecolor='whitesmoke', framealpha=1, fontsize=11,
-                   loc='best', bbox_to_anchor=(loc[0], 0.8, loc[1], 0.2))
+                   loc='best', bbox_to_anchor=(loc[0], loc[1], loc[2], loc[3]))
     
     plt.tight_layout()
     
@@ -1036,20 +1038,28 @@ def plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
         ymin = 0.8*np.min([np.min(fluxes), np.min(map_phot)])
     ymax = 1.2*np.max(fluxes)
     
-    ax.plot(waves, fluxes, label='all observed photometry',
-            marker='o', markersize=12, alpha=0.8, ls='', lw=3,
-            color='slateblue')
-    
-    ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
-                label='photometry to fit', marker='o', markersize=8, alpha=0.8,
-                ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
-    
-    ax.plot(waves, map_phot, label='MAP model photometry',
-            marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
-            mec='r', mew=3)
-    
-    ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
+    # new for committee meeting 2022
+    ax.errorbar(waves, fluxes, yerr=e_fluxes,
+                label='observed photometry', marker='o', markersize=8,
+                ls='', lw=3, ecolor='tomato', mfc='tomato', mec='tomato', mew=3)
+    ax.plot(model_waves, map_spec, label='model spectrum', lw=0.7,
             color='navy', alpha=0.7)
+    ymin, ymax = 1e-13, 1e-10
+    
+    # ax.plot(waves, fluxes, label='all observed photometry',
+    #         marker='o', markersize=12, alpha=0.8, ls='', lw=3,
+    #         color='slateblue')
+    
+    # ax.errorbar(waves[mask], fluxes[mask], yerr=e_fluxes[mask],
+    #             label='photometry to fit', marker='o', markersize=8, alpha=0.8,
+    #             ls='', lw=3, ecolor='tomato', mfc='none', mec='tomato', mew=3)
+    
+    # ax.plot(waves, map_phot, label='MAP model photometry',
+    #         marker='s', markersize=10, alpha=1, ls='', lw=3, mfc='none',
+    #         mec='r', mew=3)
+    
+    # ax.plot(model_waves, map_spec, label='MAP model spectrum', lw=0.7,
+    #         color='navy', alpha=0.7)
     
     # ax.fill_between(model_waves, lo, hi, color='lightgrey', alpha=0.2)
     
@@ -1139,6 +1149,46 @@ def plot_scatter_err(xs, ys, xerr, color, marker, cbar_label='',
     
     return
 
+def plot_scatter_multi(xs, ys, colors, labels, markers, alphas, cbar_label='',
+                       xlabel=None, ylabel=None, title=None, cmap=cm.coolwarm_r,
+                       xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
+                       figsizewidth=9.5, figsizeheight=7, scale='linear') :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = copy.copy(cmap)
+    
+    frame = ax.scatter(xs[0], ys[0], c=colors[0], edgecolors='none', 
+                       marker=markers[0], label=labels[0], cmap=cmap,
+                       alpha=alphas[0])
+    cbar = plt.colorbar(frame)
+    cbar.set_label(cbar_label, fontsize=15)
+    
+    for i in range(1, len(xs)-1) :
+        ax.scatter(xs[i], ys[i], marker=markers[i], edgecolors=colors[i],
+                   facecolors='none', label=labels[i])
+    
+    ax.plot(xs[-1], ys[-1], 'k-', label=labels[-1])
+    
+    ax.set_yscale(scale)
+    ax.set_xscale(scale)
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
 def plot_simple(xs, ys, yerr, xerr=None, label='',
                 xlabel=None, ylabel=None, title=None,
                 xmin=None, xmax=None, ymin=None, ymax=None,
@@ -1171,6 +1221,35 @@ def plot_simple(xs, ys, yerr, xerr=None, label='',
     
     return
 
+def plot_simple_dumb(xs, ys, label='',
+                     xlabel=None, ylabel=None, title=None,
+                     xmin=None, xmax=None, ymin=None, ymax=None,
+                     figsizewidth=9, figsizeheight=6) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    ax.plot(xs, ys, 'k-', label=label)
+    
+    ax.set_yscale('log')
+    # ax.set_xscale('log')
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    if label != '' :
+        ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
 def plot_simple_multi(xs, ys, labels, colors, markers, styles,
                       xlabel=None, ylabel=None, title=None,
                       xmin=None, xmax=None, ymin=None, ymax=None,
@@ -1195,7 +1274,38 @@ def plot_simple_multi(xs, ys, labels, colors, markers, styles,
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     # if labels[0] != '' :
-    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    # ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_gradients_multi(xs, ys, colors, cmap=cm.rainbow, cbar_label='',
+                         xlabel=None, ylabel=None,
+                         xmin=None, xmax=None, ymin=None, ymax=None,
+                         figsizewidth=12, figsizeheight=7) :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    cmap = copy.copy(cmap)
+    norm = Normalize(vmin=9.3, vmax=9.72)
+    
+    for i in range(len(xs)) :
+        ax.plot(xs[i], ys[i], color=colors[i])
+    
+    cbar = plt.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax)
+    cbar.set_label(cbar_label, fontsize=15)
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
     
     plt.tight_layout()
     plt.show()

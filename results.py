@@ -31,7 +31,8 @@ def show_results(cluster, ID, binNum, results_type='dynesty', save=False) :
 def get_results(cluster, ID, binNum, results_type='dynesty', version='') :
     # convenience function
     
-    infile = '{}/h5/{}_ID_{}_bin_{}.h5'.format(cluster, cluster, ID, binNum)
+    infile = '{}/h5/{}_ID_{}_bin_{}{}.h5'.format(cluster, cluster, ID, binNum,
+                                                 version)
     
     result, obs, _ = reader.results_from(infile, dangerous=True)
     model = reader.get_model(result)
@@ -43,7 +44,7 @@ def get_results(cluster, ID, binNum, results_type='dynesty', version='') :
     return result, obs, model, sps
 
 def results_corner(cluster, ID, binNum, full=False, results_type='dynesty',
-                   save=False, version='', ) :
+                   save=False, version='') :
     # create corner plots
     
     result, obs, model, sps = get_results(cluster, ID, binNum,
@@ -58,8 +59,7 @@ def results_corner(cluster, ID, binNum, full=False, results_type='dynesty',
                                                                     ID, binNum,
                                                                     version)
     
-    samples = sample_posterior(result['chain'], weights=result['weights'],
-                               nsample=len(result['chain']))
+    samples = sample_posterior(result['chain'], weights=result['weights'])
     mwas = mwa_calc(samples[:, 5], samples[:, 4], power=1)
     
     # logify the mass and tau parameters
@@ -168,6 +168,107 @@ def save_map_models(cluster, ID, binNum, mapfile=None, results_type='dynesty',
     
     if verbose :
         print('Values saved to arrays.')
+    
+    return
+
+def test(cluster, ID, version='') :
+    
+    import astropy.units as u
+    
+    from prospect.models.transforms import logsfr_ratios_to_sfrs
+    from prospect.sources.constants import cosmo
+    
+    result, obs, model, sps = get_results(cluster, ID, 0, version=version)
+    # print(result['theta_labels'])
+    zred = result['model_params'][0]['init']
+    max_age = cosmo.age(zred).value
+    # agebins = result['model_params'][8]['init']
+    
+    agelims = np.concatenate([np.log10([1e-9, 0.03, 0.1, 0.5]),
+                              np.linspace(0, np.log10(0.95*max_age), 6),
+                              np.log10([max_age])]) + 9
+    agebins = np.array([agelims[:-1], agelims[1:]]).T
+    
+    bestfit = result['bestfit']
+    
+    # zred_fit = bestfit['parameter'][0]
+    logmass = bestfit['parameter'][3]
+    logsfr_ratios = bestfit['parameter'][4:]
+    
+    logmass = np.full(logsfr_ratios.shape, logmass)
+    
+    from prospect.plotting.sfh import nonpar_mwa
+    
+    mwa = nonpar_mwa(logmass, logsfr_ratios, agebins)
+    print(mwa)
+    
+    '''
+    # Cam's attempt at MWA calculation
+    agelims = np.power(10, agelims)
+    agelims[0] = 0
+    
+    sfrs = logsfr_ratios_to_sfrs(logmass=logmass, logsfr_ratios=logsfr_ratios,
+                                 agebins=agebins)
+    ts = np.linspace(0, agelims[-1], int(1e3))
+    sfr_vec = []
+    for i in range(10) :
+        if i == 9 :
+            mask = (ts >= agelims[i]) & (ts < agelims[i+1] + 0.1)
+        else :
+            mask = (ts >= agelims[i]) & (ts < agelims[i+1])
+        
+        length = np.sum(mask)
+        
+        sfr_val = [sfrs[i]]*length
+        
+        sfr_vec.append(sfr_val)
+    
+    sfr_vec = np.concatenate(sfr_vec).ravel()
+    
+    ts = (ts*u.yr).to(u.Gyr).value
+    
+    plt.plot_simple_dumb(ts, sfr_vec, xlabel='Lookback Time (Gyr)',
+                         ylabel=r'SFR $(M_{\odot}~{\rm yr}^{-1})$')
+    MWA = np.trapz(ts*sfr_vec, ts)/np.trapz(sfr_vec, ts)
+    # print(MWA)
+    '''
+    
+    
+    
+    
+    
+    # samples = sample_posterior(result['chain'], weights=result['weights'])
+    
+    # labels = [r'$z_{\rm red}$', r'$\log(Z_{*})$', r'$\hat{\tau}_{\lambda, 2}$',
+    #           r'$\log(M_{*})$',
+    #           'ratio1', 'ratio2', 'ratio3', 'ratio4', 'ratio5',
+    #           'ratio6', 'ratio7', 'ratio8', 'ratio9'] # 'MWA'
+    
+    # z_lo, z_hi = np.percentile(samples[:, 0], [0.15, 99.85])
+    # Z_lo, Z_hi = np.percentile(samples[:, 1], [0.15, 99.85])
+    # d_lo, d_hi = np.percentile(samples[:, 2], [0.15, 99.85])
+    # M_lo, M_hi = np.percentile(samples[:, 3], [0.15, 99.85])
+    # rat1_lo, rat1_hi = np.percentile(samples[:, 4], [2.5, 97.5])
+    # rat2_lo, rat2_hi = np.percentile(samples[:, 5], [2.5, 97.5])
+    # rat3_lo, rat3_hi = np.percentile(samples[:, 6], [2.5, 97.5])
+    # rat4_lo, rat4_hi = np.percentile(samples[:, 7], [2.5, 97.5])
+    # rat5_lo, rat5_hi = np.percentile(samples[:, 8], [2.5, 97.5])
+    # rat6_lo, rat6_hi = np.percentile(samples[:, 9], [2.5, 97.5])
+    # rat7_lo, rat7_hi = np.percentile(samples[:, 10], [2.5, 97.5])
+    # rat8_lo, rat8_hi = np.percentile(samples[:, 11], [2.5, 97.5])
+    # rat9_lo, rat9_hi = np.percentile(samples[:, 12], [2.5, 97.5])
+    
+    # ranges = [(z_lo, z_hi), (Z_lo, Z_hi), (d_lo, d_hi), (M_lo, M_hi), 
+    #           (rat1_lo, rat1_hi), (rat2_lo, rat2_hi), (rat3_lo, rat3_hi),
+    #           (rat4_lo, rat4_hi), (rat5_lo, rat5_hi), (rat6_lo, rat6_hi),
+    #           (rat7_lo, rat7_hi), (rat8_lo, rat8_hi), (rat9_lo, rat9_hi)]
+    
+    # logify the mass and tau parameters
+    # samples[:, 1] = np.log10(samples[:, 1])
+    # samples[:, 5] = np.log10(samples[:, 5])
+    
+    # plt.plot_corner(samples, labels, len(labels), result, ranges=ranges,
+    #                 outfile='output/nonparametric_corner_test.png', save=True)
     
     return
 
@@ -329,7 +430,7 @@ def save_map_models(cluster, ID, binNum, mapfile=None, results_type='dynesty',
 # results_sed('m1149', 5095, 2)
 '''
 
-results_sed('m416', 2876, 0)
+# results_sed('m416', 2876, 0)
 
 # results for the flat gradient
 # results_corner('a1063', 4823, 0)
@@ -342,3 +443,11 @@ results_sed('m416', 2876, 0)
 # results_corner('a1063', 5156, 2)
 # results_corner('a1063', 5156, 3)
 # results_corner('a1063', 5156, 4)
+
+# results_sed('m416', 5607, 0, version='_flat')
+# results_sed('m416', 5607, 0, version='_gradient')
+# results_corner('m416', 5607, 0)
+
+# test('a2744', 3964, version='_nonpara')
+# results_corner('a2744', 3964, 1, version='_flat')
+# results_corner('a2744', 3964, 1, version='_gradient')

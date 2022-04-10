@@ -17,16 +17,16 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     zobs = table['z'][binNum]
     max_age, nbins = cosmo.age(zobs).value, 10
     
-    sma, smb = table['sma'][binNum], table['smb'][binNum]
-    R_e, width = table['R_e'][binNum], table['width'][binNum]
-    radius = (sma - width)*np.sqrt(smb/sma)/R_e
+    # sma, smb = table['sma'][binNum], table['smb'][binNum]
+    # R_e, width = table['R_e'][binNum], table['width'][binNum]
+    # radius = (sma - width)*np.sqrt(smb/sma)/R_e
     
     metallicities = Table.read(metalfile)
     idx = np.where((metallicities['cluster'] == cluster) &
                    (metallicities['ID'] == ID))[0][0]
     central_metallicity = metallicities['centrallogZ'][idx]
     sigma_metallicity = metallicities['sigma'][idx]
-    init_metallicity = central_metallicity - 0.1*radius
+    init_metallicity = central_metallicity # - 0.1*radius
     
     model_params = TemplateLibrary['continuity_sfh'] # non-parametric model
     
@@ -48,19 +48,14 @@ def build_model(binNum=0, fit_metallicity=1, fit_redshift=1, infile=None,
     model_params['dust2']['prior'] = TopHat(mini=0.0, maxi=2.0)
     
     model_params['agebins']['N'] = nbins
-    begin = np.array([1e-9, 0.03, 0.1, 0.5])
-    middle = np.linspace(1, 0.95*max_age, 6)
-    end = np.array([max_age])
-    edges_list = np.log10(np.concatenate([begin, middle, end])) + 9
-    edges = []
-    for i, j in zip(edges_list, edges_list[1:]) :
-        edges.append([i, j])
-    model_params['agebins']['init'] = edges
+    agelims = np.concatenate([np.log10([1e-9, 0.03, 0.1, 0.5]),
+                              np.linspace(0, np.log10(0.95*max_age), 6),
+                              np.log10([max_age])]) + 9
+    model_params['agebins']['init'] = np.array([agelims[:-1], agelims[1:]]).T
     
-    mean = np.zeros(nbins - 1)
     model_params['logsfr_ratios']['N'] = nbins - 1
-    model_params['logsfr_ratios']['init'] = mean
-    model_params['logsfr_ratios']['prior'] = StudentT(mean=mean,
+    model_params['logsfr_ratios']['init'] = np.zeros(nbins - 1)
+    model_params['logsfr_ratios']['prior'] = StudentT(mean=np.zeros(nbins - 1),
                                                       scale=0.3*np.ones(nbins - 1),
                                                       df=2*np.ones(nbins - 1))
     
@@ -159,7 +154,7 @@ if __name__ == '__main__' :
     cluster, _, ID, _ = run_params['infile'].split('/')[-1].split('_')
     run_params['cluster'], run_params['ID'] = cluster, int(ID)
     
-    outfile = '{}/h5/{}_ID_{}_bin_{}'.format(cluster, cluster, ID, binNum)
+    outfile = '{}/h5/{}_ID_{}_bin_{}_nonpara'.format(cluster, cluster, ID, binNum)
     run_params['outfile'] = outfile
     
     obs, model, sps, noise = build_all(**run_params)
