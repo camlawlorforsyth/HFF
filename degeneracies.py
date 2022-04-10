@@ -3,6 +3,8 @@ import os
 # import glob
 import numpy as np
 
+from matplotlib import cm
+
 from astropy.table import Table
 import astropy.units as u
 from astropy.visualization import make_lupton_rgb
@@ -16,6 +18,93 @@ import checks
 import plotting as plt
 
 hst_pixelscale = u.pixel_scale(0.06*u.arcsec/u.pixel)
+
+def save_age_gradients() :
+    
+    sample = Table.read('output/tables/nbCGs_with-Shipley-mass_currentlyFitted.fits')
+    
+    all_radii = []
+    all_mwa = []
+    for cluster, ID in zip(sample['cluster'], sample['ID']) :
+        
+        table = Table.read('{}/photometry/{}_ID_{}_photometry.fits'.format(
+            cluster, cluster, ID))
+        bins = table['bin'] # get a list of bin values
+        sma, smb = table['sma'], table['smb']
+        R_e, width = table['R_e'], table['width']
+        
+        radius_array = list((sma - width)*np.sqrt(smb/sma)/R_e)
+        
+        radii, mwas = determine_age_gradients(cluster, ID, bins, radius_array,
+                                              version='_gradient')
+        
+        all_radii.append(radii)
+        all_mwa.append(mwas)
+    
+    all_radii = np.concatenate(all_radii).ravel()
+    all_mwa = np.concatenate(all_mwa).ravel()
+    
+    test_table = Table([all_radii, all_mwa], names=('radius', 'MWA'))
+    test_table.write('output/tables/radii_and_MWA.fits')
+    
+    return
+
+def plot_age_gradients() :
+    
+    sample = Table.read('output/tables/radii_and_MWA.fits')
+    radii = sample['radius']
+    MWA = sample['MWA']
+    
+    edges = [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
+    
+    los, medians, his = [], [], []
+    centers, nSamples = [], []
+    for first, second in zip(edges, edges[1:]) :
+        
+        centers.append(np.mean([first, second]))
+        
+        mask = (radii >= first) & (radii < second)
+        
+        MWA_in_bin = MWA[mask]
+        nSamples.append(len(MWA_in_bin))
+        
+        lo, median, hi = np.percentile(MWA_in_bin, [16, 50, 84])
+        
+        los.append(lo)
+        medians.append(median)
+        his.append(hi)
+    
+    centers = np.array(centers)
+    los, medians, his = np.array(los), np.array(medians), np.array(his)
+    
+    plt.plot_simple_multi([centers, centers, centers], [los, medians, his],
+                          ['', '', ''], ['k', 'k', 'k'], ['', '', ''], ['--', '-', '--'],
+                          xlabel=r'Radius ($R_{\rm e}$)', ylabel='MWA (Gyr)',
+                          xmin=0, xmax=3, scale='linear')
+    
+    return
+
+def determine_age_gradients(cluster, ID, bins, radius_array, version='') :
+    
+    mwas = []
+    radii = []
+    for binNum, radius in zip(bins, radius_array) :
+        infile = '{}/h5/{}_ID_{}_bin_{}{}.h5'.format(
+            cluster, cluster, ID, binNum, version)
+        result, obs, _ = reader.results_from(infile, dangerous=True)
+        
+        samples = sample_posterior(result['chain'], weights=result['weights'])
+        
+        mwas.append(mwa_calc(samples[:, 5], samples[:, 4], power=1))
+        
+        radii.append(np.full(len(samples), radius))
+    
+    return np.concatenate(radii).ravel(), np.concatenate(mwas).ravel()
+
+
+
+
+
 
 def comparison(cluster, ID, loc=0) :
     
@@ -49,8 +138,8 @@ def comparison(cluster, ID, loc=0) :
      mwa_grad_median, mwa_grad_lo, mwa_grad_hi) = determine_lines(
          cluster, ID, bins, version='_gradient')
     
-    # xs = [xs, xs+0.05, xs, xs+0.05]
-    xs = [xs, xs, xs, xs]
+    xs = [xs, xs+0.05, xs, xs+0.05]
+    # xs = [xs, xs, xs, xs]
     ys = [Z_flat_median, Z_grad_median, mwa_flat_median, mwa_grad_median]
     lo = [Z_flat_lo, Z_grad_lo, mwa_flat_lo, mwa_grad_lo]
     hi = [Z_flat_hi, Z_grad_hi, mwa_flat_hi, mwa_grad_hi]
@@ -68,7 +157,7 @@ def comparison(cluster, ID, loc=0) :
                           xmin=np.min(xs) - 0.05,
                           xmax=np.max(xs) + 0.05, loc=loc,
                           outfile='{}_ID_{}.pdf'.format(cluster, ID),
-                          save=False)
+                          save=True)
     
     return
 
@@ -144,7 +233,7 @@ def degenerate_results(cluster, ID, loc=0, save=False, version='') :
      mwa_median, mwa_lo, mwa_hi,
      metal_best, dust_best, mwa_best) = determine_lines(cluster, ID, bins,
                                                         best=True,
-                                                        version='_gradient')
+                                                        version=version)
     
     metal_slope, metal_int = np.polyfit(xs, metal_median, 1)
     dust_slope, dust_int = np.polyfit(xs, dust_median, 1)
@@ -278,13 +367,69 @@ def determine_lines(cluster, ID, bins, best=False, version='') :
 # degenerate_results('m717', 2786, loc=1)
 # degenerate_results('m1149', 4322, loc=1)
 
-# comparison('a1063', 4823, loc=[0.6, 0.3])
+# comparison('a1063', 4823, loc=[0.6, 0.8, 0.3, 0.2]) # the ten logM~10 galaxies
 # comparison('a1063', 5156, loc=4)
 # comparison('a1063', 5771, loc=2)
 # comparison('a2744', 4369, loc=3)
 # comparison('m416', 2452, loc=2)
-# comparison('m416', 3638, loc=[0.6, 0.3])
-# comparison('m416', 4030, loc=[0.65, 0.3])
+# comparison('m416', 3638, loc=[0.6, 0.8, 0.3, 0.2])
+# comparison('m416', 4030, loc=[0.65, 0.8, 0.3, 0.2])
 # comparison('m416', 5607, loc=3)
 # comparison('m717', 2786, loc=1)
 # comparison('m1149', 4322, loc=4)
+
+# comparison('a370', 3337, loc=1) # the twenty "representative" galaxies
+# comparison('a1063', 1366, loc=1)
+# comparison('a1063', 2455, loc=3)
+# comparison('a1063', 3550, loc=1)
+# comparison('a1063', 4823, loc=[0.6, 0.8, 0.3, 0.2])
+# comparison('a2744', 3859, loc=3)
+# comparison('a2744', 3964, loc=3)
+# comparison('a2744', 4173, loc=[0.65, 0.8, 0.3, 0.2])
+# comparison('a2744', 4369, loc=3)
+# comparison('a2744', 4765, loc=1)
+# comparison('a2744', 4862, loc=3)
+# comparison('a2744', 7427, loc=4)
+# comparison('m416', 5997, loc=[0.6, 0.8, 0.3, 0.2])
+# comparison('m416', 6255, loc=1)
+# comparison('m717', 861, loc=[0.763, 0.8, 0.2, 0.2])
+# comparison('m1149', 1967, loc=3)
+# comparison('m1149', 2403, loc=1)
+# comparison('m1149', 3531, loc=4)
+# comparison('m1149', 4246, loc=1)
+# comparison('m1149', 5095, loc=[0.6, 0.8, 0.3, 0.2])
+
+# new before committee meeting
+# degenerate_results('a370', 3337, loc=1, version='_gradient') # bad
+# degenerate_results('a1063', 1366, loc=3, version='_gradient') # decent
+# degenerate_results('a1063', 2455, loc=3, version='_gradient') # bad
+# degenerate_results('a1063', 3550, loc=1, version='_gradient') # bad
+# degenerate_results('a1063', 4823, loc=1, version='_gradient') # decent
+# degenerate_results('a2744', 3859, loc=3, version='_gradient') # saved
+# degenerate_results('a2744', 3964, loc=3, version='_gradient') # saved
+# degenerate_results('a2744', 4173, loc=3, version='_gradient') # saved
+# degenerate_results('a2744', 4369, loc=1, version='_gradient') # saved
+# degenerate_results('a2744', 4765, loc=1, version='_gradient') # saved
+# degenerate_results('a2744', 4862, loc=3, version='_gradient') # saved
+# degenerate_results('a2744', 7427, loc=4, version='_gradient') # saved
+# degenerate_results('m416', 5997, loc=2, version='_gradient') # saved
+# degenerate_results('m416', 6255, loc=1, version='_gradient') # saved
+# degenerate_results('m717', 861, loc=1, version='_gradient') # saved
+# degenerate_results('m1149', 1967, loc=3, version='_gradient') # saved
+# degenerate_results('m1149', 2403, loc=2, version='_gradient') # bad
+# degenerate_results('m1149', 3531, loc=4, version='_gradient') # bad
+# degenerate_results('m1149', 4246, loc=1, version='_gradient') # saved
+# degenerate_results('m1149', 5095, loc=2, version='_gradient') # bad
+
+# degenerate_results('a1063', 4823, loc=1, version='_gradient') # bad
+# degenerate_results('a1063', 5156, loc=4, version='_gradient') # decent
+# degenerate_results('a1063', 5771, loc=4, version='_gradient') # bad
+# degenerate_results('a2744', 4369, loc=1, version='_gradient') # decent
+# degenerate_results('m416', 2452, loc=2, version='_gradient') # decent
+# degenerate_results('m416', 3638, loc=1, version='_gradient') # decent
+# degenerate_results('m416', 4030, loc=1, version='_gradient') # bad
+# degenerate_results('m416', 5607, loc=1, version='_gradient') # saved (main)
+# degenerate_results('m717', 2786, loc=1, version='_gradient') # decent
+# degenerate_results('m1149', 4322, loc=1, version='_gradient') # bad
+
+# plot_age_gradients()

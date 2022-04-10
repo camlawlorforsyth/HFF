@@ -95,6 +95,28 @@ def check_fit_progress() :
     
     return
 
+def check_radial_extents() :
+    
+    HFF = Table.read('output/tables/nbCGs.fits')
+    
+    extents = []
+    for cluster, ID in zip(HFF['cluster'], HFF['ID']) :
+        table = Table.read('{}/photometry/{}_ID_{}_photometry.fits'.format(
+            cluster, cluster, ID))
+        
+        sma, smb = table['sma'], table['smb']
+        R_e, width = table['R_e'], table['width']
+        
+        xs = (sma - width)*np.sqrt(smb/sma)/R_e
+        # xerrs_hi = width*np.sqrt(smb/sma)/R_e
+        
+        extents.append(xs[-1])
+    
+    HFF['max_Re'] = extents
+    HFF.write('output/tables/nbCGs_radial-extent.fits')
+    
+    return
+
 def check_SNR(filt) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
@@ -407,6 +429,16 @@ def plot_all_UVJ() :
                               version='UVJ',
                               xlabel=r'V$-$J', ylabel=r'U$-$V',
                               xmin=0, xmax=2.1, ymin=0, ymax=2.4, loc=4)
+    
+    return
+
+def plot_bins(cluster, ID) :
+    
+    from matplotlib import cm
+    
+    bins_image = core.open_image(cluster, ID, 'bins')
+    
+    plt.display_image_simple(bins_image, cmap=cm.gist_rainbow, norm=None)
     
     return
 
