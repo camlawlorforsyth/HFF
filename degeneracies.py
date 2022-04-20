@@ -213,7 +213,7 @@ def degenerate_results(cluster, ID, loc=0, save=False, version='') :
     # xs = (sma - 0.5*width)/R_e
     # xerrs = 0.5*width/R_e
     
-    xs = (sma - width)*np.sqrt(smb/sma)/R_e    
+    xs = (sma - width)*np.sqrt(smb/sma)/R_e
     xerrs_lo, xerrs_hi = np.zeros(len(xs)), width*np.sqrt(smb/sma)/R_e
     
     angSize = (R_e[0]*u.pix).to(u.arcsec, hst_pixelscale)

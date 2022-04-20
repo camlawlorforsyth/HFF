@@ -124,14 +124,18 @@ def display_cutouts(cutout_data, nrows, ncols, filters, flags, outfile,
         ax = fig.add_subplot(nrows, ncols, position[i])
         data = cutout_data[i]
         
-        # new version
         pos = np.ma.masked_array(data, data <= 0)
         neg = np.ma.masked_array(data, data > 0)
-        ax.imshow(pos, origin='lower', norm=LogNorm(), cmap='inferno')
-        ax.imshow(-neg, origin='lower', norm=LogNorm(), cmap='gray')
         
-        # old version
-        # ax.imshow(data, origin='lower', norm=LogNorm(), cmap=cmap)
+        if np.sum(pos) > 0.0 :
+            ax.imshow(pos, origin='lower', norm=LogNorm(), cmap='inferno')
+        else :
+            ax.imshow(pos, origin='lower', cmap='binary')
+        
+        if np.sum(neg) < 0.0 :
+            ax.imshow(-neg, origin='lower', norm=LogNorm(), cmap='gray')
+        else :
+           ax.imshow(-neg, origin='lower', cmap='binary')
         
         ax.axis('off')
         ax.set_title('{} : {}'.format(filters[i], flags[i]), fontsize=13,
@@ -1087,7 +1091,8 @@ def plot_sed_from_fit(waves, fluxes, e_fluxes, mask, map_spec, map_phot,
 def plot_scatter(xs, ys, color, label, marker, cbar_label='',
                  xlabel=None, ylabel=None, title=None, cmap=cm.rainbow,
                  xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
-                 figsizewidth=9.5, figsizeheight=7, scale='linear') :
+                 figsizewidth=9.5, figsizeheight=7, scale='linear',
+                 vmin=None, vmax=None,) :
     
     global currentFig
     fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
@@ -1096,10 +1101,12 @@ def plot_scatter(xs, ys, color, label, marker, cbar_label='',
     ax = fig.add_subplot(111)
     
     cmap = copy.copy(cmap)
+    norm = Normalize(vmin=vmin, vmax=vmax)
     
-    frame = ax.scatter(xs, ys, c=color, marker=marker, label=label, cmap=cmap)
+    frame = ax.scatter(xs, ys, c=color, marker=marker, label=label, cmap=cmap,
+                       edgecolors='grey')
     cbar = plt.colorbar(frame)
-    cbar.set_label(cbar_label, fontsize=15)
+    cbar.set_label(cbar_label, fontsize=15)    
     
     ax.set_yscale(scale)
     ax.set_xscale(scale)
@@ -1109,14 +1116,14 @@ def plot_scatter(xs, ys, color, label, marker, cbar_label='',
     
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
-    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    # ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
     
     plt.tight_layout()
     plt.show()
     
     return
 
-def plot_scatter_err(xs, ys, xerr, color, marker, cbar_label='',
+def plot_scatter_err(xs, ys, yerr, color, marker, cbar_label='',
                      xlabel=None, ylabel=None, title=None, cmap=cm.rainbow,
                      xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
                      figsizewidth=9.5, figsizeheight=7, scale='linear') :
@@ -1129,7 +1136,7 @@ def plot_scatter_err(xs, ys, xerr, color, marker, cbar_label='',
     
     cmap = copy.copy(cmap)
     
-    ax.errorbar(xs, ys, xerr=xerr, fmt='none', ecolor='k')
+    ax.errorbar(xs, ys, yerr=yerr, fmt='none', ecolor='k')
     
     frame = ax.scatter(xs, ys, c=color, marker=marker, cmap=cmap, zorder=3)
     cbar = plt.colorbar(frame)

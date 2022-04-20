@@ -10,7 +10,7 @@ from core import open_cutout
 
 cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
-def determine_fluxes(cluster, filters, subpop='non-bCG') :
+def determine_fluxes(cluster, filters, subpop='nbCGs') :
     '''
     Determine the flux in every annulus/bin for a given object for a given
     filter. Then move to the next subsequent filter and determine the fluxes
@@ -31,9 +31,8 @@ def determine_fluxes(cluster, filters, subpop='non-bCG') :
     
     '''
     
-    if subpop == 'non-bCG' :
-        use_table = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
-                                                               cluster))
+    if subpop == 'nbCGs' :
+        use_table = Table.read('{}/{}_{}.fits'.format(cluster, cluster, subpop))
     
     use_columns = [col for col in use_table.colnames if col.endswith('_use')]
     IDs = use_table['id']

@@ -126,7 +126,7 @@ def check_SNR(filt) :
         
         inDir = '{}/cutouts'.format(cluster)
         
-        cluster_table = Table.read('{}/{}_final_objects.fits'.format(
+        cluster_table = Table.read('{}/{}_sample.fits'.format(
             cluster, cluster))
         
         mask = (cluster_table['id'] < 20000) & (cluster_table['pop'] == 'Q')
@@ -272,7 +272,7 @@ def concatenate_all(both=False, save=False) :
     all_clusters_list = []
     
     for cluster in clusters :
-        # infile = '{}/{}_final_objects.fits'.format(cluster, cluster)
+        # infile = '{}/{}_sample.fits'.format(cluster, cluster)
         infile = '{}/{}_non-bCG_QGs.fits'.format(cluster, cluster)
         cluster_table = Table.read(infile)
         cluster_table['cluster'] = cluster
@@ -285,7 +285,7 @@ def concatenate_all(both=False, save=False) :
         all_parallels_list = []
         for cluster in clusters :
             parallel_table = Table.read(
-                '{}par/{}par_final_objects.fits'.format(cluster, cluster))
+                '{}par/{}par_sample.fits'.format(cluster, cluster))
             parallel_table['field'] = '{}par'.format(cluster)
             all_parallels_list.append(parallel_table)
         all_parallels = vstack(all_parallels_list)
@@ -551,7 +551,7 @@ def save_bkgshists(cluster, filters, population) :
     
     # now loop here over all the IDs that are available
     # open the table of all the objects 
-    clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    clustable = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     
     # mask the table based on the population of interest
     clustable = clustable[clustable['pop'] == population]
@@ -600,7 +600,9 @@ def save_bkgshists(cluster, filters, population) :
 def save_pngs(cluster, filters, population) :
     
     num_filts = len(filters)
-    if num_filts == 9 :
+    if num_filts == 7 :
+        nrows, ncols = 3, 3
+    elif num_filts == 9 :
         nrows, ncols = 3, 3
     elif num_filts == 12 :
         nrows, ncols = 3, 4
@@ -609,7 +611,7 @@ def save_pngs(cluster, filters, population) :
     else :
         nrows, ncols = 4, 5
     
-    outDir = '{}/pngs'.format(cluster)
+    # outDir = '{}/pngs'.format(cluster)
     outDirAlt = '{}/images_cutouts_segmapped'.format(cluster)
     
     # os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
@@ -617,7 +619,7 @@ def save_pngs(cluster, filters, population) :
     os.makedirs('{}'.format(outDirAlt), exist_ok=True)
     
     # open the table of all the objects 
-    table = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    table = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     
     # mask the table based on the population of interest
     table = table[table['pop'] == population]
@@ -638,18 +640,18 @@ def save_pngs(cluster, filters, population) :
     for i in range(len(IDs)) :
         segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
                                                            IDs[i])
-        segMap, _, _, _, _, _, _, _ = core.open_cutout(segPath)
+        segMap = core.open_cutout(segPath, simple=True)
         
-        outfile = outDir + '/{}_ID_{}.png'.format(cluster, IDs[i])
+        # outfile = outDir + '/{}_ID_{}.png'.format(cluster, IDs[i])
         outfile_segmapped = outDirAlt + '/{}_ID_{}.png'.format(cluster, IDs[i])
         
-        cutout_data = []
+        # cutout_data = []
         cutout_segmapped = []
         for filt in filters :
             infile = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster, cluster,
                                                           IDs[i], filt)
-            data, _, _, _, _, _, _, _ = core.open_cutout(infile)
-            cutout_data.append(data)
+            data = core.open_cutout(infile, simple=True)
+            # cutout_data.append(data)
             
             if IDs[i] > 20000:
                 mask = (segMap > 0)
@@ -676,7 +678,7 @@ def save_sbps(cluster, subpop) :
         clustable = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
                                                                cluster))
     
-    # clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    # clustable = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     # mask the table based on the population of interest
     # clustable = clustable[clustable['pop'] == population]
     
@@ -781,7 +783,7 @@ def save_seds(cluster, subpop) :
         clustable = Table.read('{}/{}_non-bCG_QGs.fits'.format(cluster,
                                                                cluster))
     
-    # clustable = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    # clustable = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     # mask the table based on the population of interest
     # clustable = clustable[clustable['pop'] == population]
     
