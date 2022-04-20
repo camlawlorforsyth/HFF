@@ -24,13 +24,17 @@ def combine_with_issues(cluster) :
     
     '''
     
-    sci_objs = Table.read('{}/{}_final_objects.fits'.format(cluster, cluster))
+    sci_objs = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     issues = Table.read('{}/{}_issues.csv'.format(cluster, cluster))
     
     combined = join(sci_objs, issues, keys='id')
     
-    combined = combined[combined['id'] < 20000]
-    combined.write('{}/{}_non-bCG_QGs.fits'.format(cluster, cluster))
+    # combined = combined[combined['id'] < 20000] # only for non-bCGs
+    
+    # ensure that only galaxies with 'f160w_use' are included
+    combined = combined[combined['f160w_use'] == True]
+    
+    combined.write('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
     
     return
 
@@ -79,8 +83,8 @@ def determine_rms(segPath, files) :
     
     return rmses
 
-def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
-                 selection, models, z_spec=True) :
+def save_cutouts(cluster, sample_path, filters, rms, files, segPath,
+                 selection, models, redshift_type='z_spec') :
     '''
     Save the cutouts for all science objects in a given filter, as well as
     noise cutouts and segmentation map cutouts. Then move to the next filter,
@@ -95,12 +99,9 @@ def save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
     
     extent = 5 # maximum radius of image will be 5 times R_e
     
-    sci_objs = Table.read(final_objs_path)
+    sci_objs = Table.read(sample_path)
     xx, yy = sci_objs['x'], sci_objs['y']
-    if z_spec :
-        redshift = sci_objs['z_spec']
-    else : 
-        redshift = sci_objs['z']
+    redshift = sci_objs[redshift_type]
     ID, r_e = sci_objs['id'], sci_objs['flux_radius']*u.pixel
     sma, smb = sci_objs['a_image'], sci_objs['b_image']
     pa, object_type = sci_objs['theta_J2000'], sci_objs['pop']

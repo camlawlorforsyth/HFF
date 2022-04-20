@@ -8,7 +8,7 @@ def a370_params() :
     
     cluster_redshift, sigma = 0.375, 1170*u.km/u.s # sigma from Dressler+ 1999
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'abell370clu_catalogs', 'abell370clu_v3.9'
     misc = 'misc/abell370clu_misc/'
     
@@ -54,14 +54,14 @@ def a370_params() :
            0.016790748246994322,  0.008905223215942533,
            0.013136195492602264,  0.008631396]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a1063_params() :
     
     cluster_redshift, sigma = 0.348, 1840*u.km/u.s # sigma from Lotz+ 2017
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'abell1063clu_catalogs', 'abell1063clu_v3.9'
     misc = 'misc/abell1063clu_misc/'
     
@@ -117,14 +117,14 @@ def a1063_params() :
            0.011814075886542935,  0.013167607483792613,
            0.013916335017667853,  0.023791686]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a2744_params() :
     
     cluster_redshift, sigma = 0.308, 1497*u.km/u.s # sigma from Owers+ 2011
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'abell2744clu_catalogs', 'abell2744clu_v3.9'
     misc = 'misc/abell2744clu_misc/'
     
@@ -163,14 +163,14 @@ def a2744_params() :
            0.0078074336316639814,  0.025402163365869854,
            0.010081889]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m416_params() :
     
     cluster_redshift, sigma = 0.396, 955*u.km/u.s #sigma from Jauzac+ 2014
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'macs0416clu_catalogs', 'macs0416clu_v3.9'
     misc = 'misc/macs0416clu_misc/'
     
@@ -226,14 +226,14 @@ def m416_params() :
            0.013362314701066995,  0.006921186187522245,
            0.010957062338618869,  0.0073933504]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m717_params() :
     
     cluster_redshift, sigma = 0.545, 1660*u.km/u.s # sigma from Ebeling+ 2007
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'macs0717clu_catalogs', 'macs0717clu_v3.9'
     misc = 'misc/macs0717clu_misc/'
     
@@ -292,14 +292,14 @@ def m717_params() :
            0.005199413123335132,   0.0072590100581836495,
            0.005936407]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m1149_params() :
     
     cluster_redshift, sigma = 0.543, 1840*u.km/u.s # sigma from Ebeling+ 2007
     delta_z = (3*sigma/speed_of_light)*(1 + cluster_redshift)
-    force_spec = True
+    redshift_type = 'z_spec'
     first_path, second_path = 'macs1149clu_catalogs', 'macs1149clu_v3.9'
     misc = 'misc/macs1149clu_misc/'
     
@@ -358,7 +358,7 @@ def m1149_params() :
            0.007802336747616293,  0.008701588266849821,
            0.008023425]
     
-    return (cluster_redshift, delta_z, delta_z, force_spec,
+    return (cluster_redshift, delta_z, delta_z, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a370par_params() :
@@ -366,7 +366,7 @@ def a370par_params() :
     cluster_redshift = 0.375
     delta_z_lo = cluster_redshift - 0.2884056845219235 # min. z from clusters
     delta_z_hi = 0.5714108548187694 - cluster_redshift # max. z from clusters
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'abell370par_catalogs', 'abell370par_v3.9'
     misc = 'misc/abell370par_misc/'
     
@@ -399,7 +399,7 @@ def a370par_params() :
            0.0019222345444720006, 0.0022521165138177563,
            0.0042280676]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a1063par_params() :
@@ -407,7 +407,7 @@ def a1063par_params() :
     cluster_redshift = 0.348
     delta_z_lo = cluster_redshift - 0.2884056845219235
     delta_z_hi = 0.5714108548187694 - cluster_redshift
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'abell1063par_catalogs', 'abell1063par_v3.9'
     misc = 'misc/abell1063par_misc/'
     
@@ -440,7 +440,7 @@ def a1063par_params() :
            0.003545452030027999,  0.0035276791011699285,
            0.0049573397]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def a2744par_params() :
@@ -448,7 +448,7 @@ def a2744par_params() :
     cluster_redshift = 0.308
     delta_z_lo = cluster_redshift - 0.2884056845219235
     delta_z_hi = 0.5714108548187694 - cluster_redshift
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'abell2744par_catalogs', 'abell2744par_v3.9'
     misc = 'misc/abell2744par_misc/'
     
@@ -481,7 +481,7 @@ def a2744par_params() :
            0.0032909964401797065, 0.0043810722888363175,
            0.0036131504]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m416par_params() :
@@ -489,7 +489,7 @@ def m416par_params() :
     cluster_redshift = 0.396
     delta_z_lo = cluster_redshift - 0.2884056845219235
     delta_z_hi = 0.5714108548187694 - cluster_redshift
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'macs0416par_catalogs', 'macs0416par_v3.9'
     misc = 'misc/macs0416par_misc/'
     
@@ -527,7 +527,7 @@ def m416par_params() :
            0.002467709853135251,   0.008358303082935914,
            0.012034563]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m717par_params() :
@@ -535,7 +535,7 @@ def m717par_params() :
     cluster_redshift = 0.545
     delta_z_lo = cluster_redshift - 0.2884056845219235
     delta_z_hi = 0.5714108548187694 - cluster_redshift
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'macs0717par_catalogs', 'macs0717par_v3.9'
     misc = 'misc/macs0717par_misc/'
     
@@ -568,7 +568,7 @@ def m717par_params() :
            0.0050811364834191285, 0.0029706232359012624,
            0.005247639]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
 
 def m1149par_params() :
@@ -576,7 +576,7 @@ def m1149par_params() :
     cluster_redshift = 0.543
     delta_z_lo = cluster_redshift - 0.2884056845219235
     delta_z_hi = 0.5714108548187694 - cluster_redshift
-    force_spec = False
+    redshift_type = 'z'
     first_path, second_path = 'macs1149par_catalogs', 'macs1149par_v3.9'
     misc = 'misc/macs1149par_misc/'
     
@@ -609,5 +609,5 @@ def m1149par_params() :
            0.0022168557361695275, 0.0029588726664742273,
            0.0035911163]
     
-    return (cluster_redshift, delta_z_lo, delta_z_hi, force_spec,
+    return (cluster_redshift, delta_z_lo, delta_z_hi, redshift_type,
             first_path, second_path, filters, segPath, files, models, RMS)
