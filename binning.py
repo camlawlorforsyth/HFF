@@ -1,7 +1,8 @@
 
 import os
-import glob
 import numpy as np
+
+from astropy.table import Table
 
 from core import open_cutout
 
@@ -22,47 +23,23 @@ def bin_all(cluster):
     
     '''
     
-    inDir = '{}/cutouts'.format(cluster)
-    outDir = '{}/bins'.format(cluster)
-    
-    f160w_paths = '{}/{}_ID_*_f160w.fits'.format(inDir, cluster)
-    f160w_file_list = glob.glob(f160w_paths) # get all F160W images
-    f160w_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
-    for file in f160w_file_list :
-        file = file.replace(os.sep, '/')
-        f160w_files.append(file)
-        IDs.append(file.split('_')[2])
-    
-    noise_paths = '{}/{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
-    noise_file_list = glob.glob(noise_paths) # get all F160W noise images
-    noise_files = []
-    for file in noise_file_list :
-        file = file.replace(os.sep, '/')
-        noise_files.append(file)
-    
-    segmap_paths = '{}/{}_ID_*_segmap.fits'.format(inDir, cluster)
-    segmap_file_list = glob.glob(segmap_paths) # get all F160W noise images
-    segmap_files = []
-    for file in segmap_file_list :
-        file = file.replace(os.sep, '/')
-        segmap_files.append(file)
-    
-    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
+    os.makedirs('{}/bins'.format(cluster), exist_ok=True) # ensure the output
         # directory for the bins is available
     
-    for i in range(len(f160w_files)) :
-        outfile = '{}/{}_ID_{}_annuli.npz'.format(outDir, cluster, IDs[i])
-        
+    table = Table.read('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
+    IDs = table['ID']
+    
+    for ID in IDs :
         (annuli_map, smas, smbs, fluxes, errs,
-         nPixels, widths, pas) = annuli_bins(f160w_files[i], noise_files[i],
-                                             segmap_files[i], int(IDs[i]))
+         nPixels, widths, pas) = annuli_bins(cluster, int(ID))
         
+        outfile = '{}/bins/{}_ID_{}_annuli.npz'.format(cluster, cluster, ID)
         np.savez(outfile, image=annuli_map, sma=smas, smb=smbs,
                  flux=fluxes, err=errs, nPixels=nPixels, width=widths, pa=pas)
     
     return
 
-def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
+def annuli_bins(cluster, ID) :
     '''
     Determine the annuli to use for subsequent analysis.
     
@@ -104,9 +81,14 @@ def annuli_bins(f160w_file, noise_file, segmap_file, ID) :
     rin = 0 # the starting value for the semi-major axis of the ellipse
     
     (sci, dim, photnu, r_e,
-     redshift, sma, smb, pa_deg) = open_cutout(f160w_file)
-    noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
-    segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
+     redshift, sma, smb, pa_deg) = open_cutout(
+         '{}/cutouts/{}_ID_{}_f160w.fits'.format(cluster, cluster, ID))
+    noise = open_cutout(
+        '{}/cutouts/{}_ID_{}_f160w_noise.fits'.format(cluster, cluster, ID), 
+        simple=True)
+    segMap = open_cutout(
+        '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster, ID),
+        simple=True)
     
     eta = 1 - smb/sma # the ellipticity of the ellipse
     
@@ -311,9 +293,3 @@ def elliptical_mask(dim, xy, rin, eta, pa) :
     mask = ellipse <= 1
     
     return mask
-
-# simple testing purposes - place on line 53
-# f160w_files = ['m416/cutouts/m416_ID_2876_f160w.fits']
-# IDs = ['2876']
-# noise_files = ['m416/cutouts/m416_ID_2876_f160w_noise.fits']
-# segmap_files = ['m416/cutouts/m416_ID_2876_segmap.fits']

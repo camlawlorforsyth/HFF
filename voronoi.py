@@ -1,8 +1,8 @@
 
 import os
-import glob
 import numpy as np
 
+from astropy.table import Table
 from vorbin.voronoi_2d_binning import voronoi_2d_binning
 
 import plotting as plt
@@ -84,38 +84,26 @@ def vorbin_all(cluster):
     
     '''
     
-    inDir = '{}/cutouts'.format(cluster)
-    outDir = '{}/vorbins'.format(cluster)
-    SNR = 400 # the target signal-to-noise ratio to use
-    
-    f160w_paths = '{}/{}_ID_*_f160w.fits'.format(inDir, cluster)
-    f160w_file_list = glob.glob(f160w_paths) # get all F160W images
-    f160w_files, IDs = [], [] # get a list of IDs corresponding to each galaxy
-    for file in f160w_file_list :
-        file = file.replace(os.sep, '/')
-        f160w_files.append(file)
-        IDs.append(file.split('_')[2])
-    
-    noise_paths = '{}/{}_ID_*_f160w_noise.fits'.format(inDir, cluster)
-    noise_file_list = glob.glob(noise_paths) # get all F160W noise images
-    noise_files = []
-    for file in noise_file_list :
-        file = file.replace(os.sep, '/')
-        noise_files.append(file)
-    
-    os.makedirs('{}'.format(outDir), exist_ok=True) # ensure the output
+    os.makedirs('{}/vorbins'.format(cluster), exist_ok=True) # ensure the output
         # directory for the vorbins is available
     
-    for i in range(len(f160w_files)) :
-        outfile = '{}/{}_ID_{}_vorbins.npz'.format(outDir, cluster, IDs[i])
+    table = Table.read('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
+    IDs = table['ID']    
+    
+    for ID in IDs :
         (sci, dim, photnu, r_e,
-         redshift, sma, smb, pa) = open_cutout(f160w_files[i])
-        noise, _, _, _, _, _, _, _ = open_cutout(noise_files[i])
+         redshift, sma, smb, pa) = open_cutout(
+             '{}/cutouts/{}_ID_{}_f160w.fits'.format(cluster, cluster, ID))
+        noise = open_cutout(
+            '{}/cutouts/{}_ID_{}_f160w_noise.fits'.format(cluster, cluster, ID),
+            simple=True)
         
+        # target a signal-to-noise ratio of 400
         xs, ys, binNum, xBar, yBar, SN, nPixels = vorbin_data(sci, noise,
-                                                              dim, SNR)
+                                                              dim, 400)
         bins_image = binNum.reshape(dim) # reshape the bins into an image
         
+        outfile = '{}/vorbins/{}_ID_{}_vorbins.npz'.format(cluster, cluster, ID)
         np.savez(outfile, image=bins_image, x=xs, y=ys, binNum=binNum,
                  xbar=xBar, ybar=yBar, SN=SN, nPixels=nPixels)
     
