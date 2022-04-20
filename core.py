@@ -5,7 +5,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.table import hstack, join, Table
-from scipy import interpolate, stats
+from scipy import interpolate
 
 import plotting as plt
 
@@ -131,7 +131,8 @@ def build_filter_table(save_par=False, display=False, write=False) :
     return master_table
 
 def combine_colors(first_path, second_path, FUV_filtnum=218, U_filtnum=153,
-                   V_filtnum=155, J_filtnum=161, key='id', plot_hist=False) :
+                   V_filtnum=155, J_filtnum=161, cluster='', key='id',
+                   plot_hist=False, write=False) :
     '''
     
     
@@ -188,6 +189,8 @@ def combine_colors(first_path, second_path, FUV_filtnum=218, U_filtnum=153,
     
     table = Table([FUVUVJ_join['id'], M_AB_FUV, M_AB_U, M_AB_V, M_AB_J],
                   names=('id', 'M_AB_FUV', 'M_AB_U', 'M_AB_V', 'M_AB_J') )
+    if write :
+        table.write('{}/{}_colors.fits'.format(cluster, cluster))
     
     if plot_hist :
         plt.plot_UVJ_hist(table['M_AB_V'] - table['M_AB_J'],
@@ -223,55 +226,9 @@ def create_blank_models() :
     
     return
 
-def determine_final_flags(table) :
-    '''
-    Determine the final flag for each object in `table`.
-    
-    Parameters
-    ----------
-    table : astropy.table.Table
-        The table to determine the final flags for.
-    
-    Returns
-    -------
-    final_flag : list
-        The final flags for the objects in the table.
-    
-    '''
-    
-    # determine the band flags that are in the catalog
-    band_flags = [string for string in table.colnames if 'flag_F' in string]
-    
-    # use only those columns to create a new subtable
-    flag_table = Table([table[band_flag] for band_flag in band_flags],
-                       names=tuple(band_flags))
-    
-    # determine the appropriate final flag for each galaxy
-    final_flag = []
-    for row in flag_table.iterrows() :
-        '''
-        row = np.array(row)
-        # mask out any zeros
-        non_zero = row[row != 0]
-        mode, count = stats.mode(non_zero)
-        if len(mode) == 0 :
-            final_flag.append(0)
-        else :
-            # print(mode[0])
-            final_flag.append(mode[0])
-        '''
-        final_flag.append(0)
-    
-    # print(final_flag)
-    # table['final_flag'] = final_flag
-    # set_of_sums = set(combined['final_flag'])
-    # print(np.sort(list(set_of_sums)))
-    
-    return final_flag
-
-def determine_final_objects(cluster, redshift, key='id',
-                            z_spec=True, plot=False,
-                            redshift_tol_lo=0.01, redshift_tol_hi=0.01) :
+def determine_initial_sample(cluster, redshift, key='id', redshift_type='z_spec',
+                             redshift_tol_lo=0.01, redshift_tol_hi=0.01,
+                             others=False) :
     '''
     Determine the final objects to use for analysis, based on various quality
     flags included in the catalog tables. Also combine relevant data including
@@ -296,8 +253,8 @@ def determine_final_objects(cluster, redshift, key='id',
     
     Returns
     -------
-    final_objs : astropy.table.Table
-        The final objects which will be used for subsequent analysis.
+    combined[mask] : astropy.table.Table
+        The intial good objects which will be used for subsequent analysis.
     
     '''
     
@@ -308,126 +265,31 @@ def determine_final_objects(cluster, redshift, key='id',
     # join the data based on a specific key
     combined = join(fastoutput, photometry, keys=key)
     
-    # mask the data based on a good spectroscopic redshift
-    if z_spec :
-        mask = combined['z_spec'] > 0
-        combined = combined[mask]
-    else :
-        mask = combined['z'] > 0
-        combined = combined[mask]
+    # mask the data based on a good spectroscopic redshift, then remove any
+    # point sources and "uncertain" sources (as per Shipley+2018), then
+    # remove not "OK" sources (as per Shipley+2018), then remove sources
+    # that are not in the footprint of the F160W image, then remove not-massive
+    # objects, and finally mask based on redshift
+    mask = ((combined['{}'.format(redshift_type)] > 0) &
+            (combined['star_flag'] == 0) & (combined['use_phot'] == 1) &
+            (combined['flag_F160W'] != -1) & (combined['flag_F160W'] != -99) &
+            (combined['lmass'] >= 8) &
+            (combined['{}'.format(redshift_type)] >= redshift-redshift_tol_lo) &
+            (combined['{}'.format(redshift_type)] <= redshift+redshift_tol_hi))
     
-    # remove any point sources and "uncertain" sources, as per Shipley+ (2018)
-    mask = combined['star_flag'] == 0
-    combined = combined[mask]
+    if others :
+        determine_other_sample(combined, combined[mask], redshift, redshift_type,
+                               redshift_tol_lo, redshift_tol_hi, cluster)
     
-    # remove not "OK" sources, as per Shipley+ (2018)
-    mask = combined['use_phot'] == 1
-    combined = combined[mask]
-    
-    # remove sources that are not in the footprint of the F160W image
-    mask = (combined['flag_F160W'] != -1) & (combined['flag_F160W'] != -99)
-    combined = combined[mask]
-    
-    # mask the modelled-and-subtracted bCGs
-    # mask = combined['bandtotal'] != 'bcg'
-    # combined = combined[mask]
-    
-    # mask specific galaxies from certain clusters
-    if cluster == 'm717' :
-        mask = ((combined['id'] != 777) & (combined['id'] != 5551) &
-                (combined['id'] != 5890) & (combined['id'] != 5956) &
-                (combined['id'] != 6308) & (combined['id'] != 6335))
-        # the above IDs all have no synethsized FUV, U, V, J color indices
-    if cluster == 'a1063par' :
-        mask = (combined['id'] != 789) & (combined['id'] != 4690)
-        # ID 789 is too faint and resulted in no annuli
-        # ID 4690 is an errant detection on the edge of the field
-        combined = combined[mask]
-    
-    # determine the final flags for all galaxies
-    final_flags = determine_final_flags(combined)
-    combined['final_flag'] = final_flags
-    
-    # plot the final objects that will be used
-    if z_spec :
-        final_objs_mask = ((combined['final_flag']==0) &
-                           (combined['lmass'] >= 8) &
-                           (combined['z_spec'] >= redshift - redshift_tol_lo) &
-                           (combined['z_spec'] <= redshift + redshift_tol_hi))
-    else :
-        final_objs_mask = ((combined['final_flag']==0) &
-                           (combined['lmass'] >= 8) &
-                           (combined['z'] >= redshift - redshift_tol_lo) &
-                           (combined['z'] <= redshift + redshift_tol_hi))
-    final_objs = combined[final_objs_mask]
-    final_objs_lmass = final_objs['lmass']
-    if z_spec :
-        final_objs_z = final_objs['z_spec']
-    else :
-        final_objs_z = final_objs['z']
-    length_of_final = len(final_objs)
-    
-    # plot other objects with no flags, but with a stellar mass < 10^8 solMass
-    if z_spec :
-        small_mass_mask = ((combined['final_flag']==0) &
-                           (combined['lmass'] < 8) &
-                           (combined['z_spec'] >= redshift - redshift_tol_lo) &
-                           (combined['z_spec'] <= redshift + redshift_tol_hi))
-    else :
-        small_mass_mask = ((combined['final_flag']==0) &
-                           (combined['lmass'] < 8) &
-                           (combined['z'] >= redshift - redshift_tol_lo) &
-                           (combined['z'] <= redshift + redshift_tol_hi))
-    small_mass_objs = combined[small_mass_mask]
-    small_mass_objs_lmass = small_mass_objs['lmass']
-    if z_spec :
-        small_mass_objs_z = small_mass_objs['z_spec']
-    else :
-        small_mass_objs_z = small_mass_objs['z']
-    
-    # plot other objects with no flags, but beyond the redshift limits
-    if z_spec :
-        no_flags_mask = ((combined['final_flag']==0) &
-                         ((combined['z_spec'] < redshift - redshift_tol_lo) |
-                          (combined['z_spec'] > redshift + redshift_tol_hi)))
-    else :
-        no_flags_mask = ((combined['final_flag']==0) &
-                         ((combined['z'] < redshift - redshift_tol_lo) |
-                          (combined['z'] > redshift + redshift_tol_hi)))
-    no_flags_objs = combined[no_flags_mask]
-    no_flags_objs_lmass = no_flags_objs['lmass']
-    if z_spec :
-        no_flags_objs_z = no_flags_objs['z_spec']
-    else :
-        no_flags_objs_z = no_flags_objs['z']
-    
-    # create the scatter plot
-    if plot :
-        xs = [no_flags_objs_lmass, small_mass_objs_lmass, final_objs_lmass]
-        ys = [no_flags_objs_z, small_mass_objs_z, final_objs_z]
-        labels = [r'$z~\notin~z_c \pm \delta z$',
-                  r'$M_* < 10^{8}~M_{\odot}$',
-                  'final ({})'.format(length_of_final)]
-        styles = ['x', '+', 'o']
-        colors = ['k', 'k', 'k']
-        sizes = [75, 80, 40]
-        alphas = [1, 1, 0.4]
-        plt.plot_objects(xs, ys, redshift, labels, styles, colors,sizes,alphas,
-                         redshift_tol_lo=redshift_tol_lo,
-                         redshift_tol_hi=redshift_tol_hi,
-                         xlabel=r'$\log(M_{*}/M_{\odot})$',
-                         ylabel=r'$z$', title=cluster,
-                         xmin=2, xmax=14, ymin=0.2, ymax=0.8)
-    
-    return final_objs
+    return combined[mask]
 
-def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
-                                key='id', FUV_filtnum=218, U_filtnum=153,
-                                V_filtnum=155, J_filtnum=161,
-                                redshift_tol_lo=0.01, redshift_tol_hi=0.01,
-                                z_spec=True, plot_all=False, plot_uvj=False,
-                                write_final_objs=False, write_regions=False,
-                                selection='FUVVJ', verbose=False) :
+def determine_final_sample(cluster, redshift, first_path, second_path,
+                           key='id', FUV_filtnum=218, U_filtnum=153,
+                           V_filtnum=155, J_filtnum=161,
+                           redshift_tol_lo=0.01, redshift_tol_hi=0.01,
+                           redshift_type='z_spec', plot_all=False, plot_uvj=False,
+                           write_final_objs=False, write_regions=False,
+                           selection='FUVVJ', verbose=False) :
     '''
     
     
@@ -451,8 +313,8 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
         Number describing V filter color indices file. The default is 155.
     J_filtnum : int, optional
         Number describing J filter color indices file. The default is 161.
-    z_spec : bool, optional
-        Flag to use spectroscopic redshifts. The default is True.
+    redshift_type : str, optional
+        Flag to use spectroscopic redshifts. The default is 'z_spec'.
     redshift_tol_lo : float, optional
         The low redshift tolerance to use. The default is 0.01.
     redshift_tol_hi : float, optional
@@ -474,13 +336,13 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
     
     '''
     
-    final_objs = determine_final_objects(cluster, redshift, key=key,
-                                         z_spec=z_spec, plot=plot_all,
-                                         redshift_tol_lo=redshift_tol_lo,
-                                         redshift_tol_hi=redshift_tol_hi)
+    initial = determine_initial_sample(cluster, redshift, key=key,
+                                       redshift_type=redshift_type,
+                                       redshift_tol_lo=redshift_tol_lo,
+                                       redshift_tol_hi=redshift_tol_hi)
     colors = combine_colors(first_path, second_path, FUV_filtnum, U_filtnum,
-                            V_filtnum, J_filtnum, key=key)
-    final = join(final_objs, colors, keys=key)
+                            V_filtnum, J_filtnum, cluster, key=key)
+    final = join(initial, colors, keys=key)
     
     # determine colors and set values for the different color-color diagrams
     if selection == 'UVJ' : # using values from Muzzin et al. 2013
@@ -517,7 +379,7 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
                      xmin=0, xmax=1.9, ymin=0, ymax=2.4)
     
     if write_final_objs :
-        final_objs_file = '{}/{}_final_objects.fits'.format(cluster, cluster)
+        final_objs_file = '{}/{}_sample.fits'.format(cluster, cluster)
         final.write(final_objs_file)
         if verbose :
             print('Saved: Final objects to fits file.')
@@ -526,6 +388,41 @@ def determine_finalObjs_w_color(cluster, redshift, first_path, second_path,
         save_regions(cluster, final)
         if verbose :
             print('Saved: Regions to file.')
+    
+    return
+
+def determine_other_sample(combined, good_sample, redshift, redshift_type,
+                           redshift_tol_lo, redshift_tol_hi, cluster) :
+    # determine other objects that didn't satisfy the initial sample criteria
+    
+    # galaxies with stellar mass < 10^8 solMass, but within the redshift limits
+    small = ((combined['lmass'] < 8) &
+             (combined['{}'.format(redshift_type)] >= redshift-redshift_tol_lo) &
+             (combined['{}'.format(redshift_type)] <= redshift+redshift_tol_hi))
+    small = combined[small]
+    
+    # other objects beyond the redshift limits
+    far = ((combined['{}'.format(redshift_type)] < redshift - redshift_tol_lo) |
+           (combined['{}'.format(redshift_type)] > redshift + redshift_tol_hi))
+    far = combined[far]
+    
+    # create the scatter plot
+    xs = [far['lmass'], small['lmass'], good_sample['lmass']]
+    ys = [far['{}'.format(redshift_type)], small['{}'.format(redshift_type)],
+          good_sample['{}'.format(redshift_type)]]
+    labels = [r'$z~\notin~z_c \pm \delta z$',
+              r'$M_* < 10^{8}~M_{\odot}$',
+              'final ({})'.format(len(good_sample))]
+    styles = ['x', '+', 'o']
+    colors = ['k', 'k', 'k']
+    sizes = [75, 80, 40]
+    alphas = [1, 1, 0.4]
+    plt.plot_objects(xs, ys, redshift, labels, styles, colors, sizes, alphas,
+                     redshift_tol_lo=redshift_tol_lo,
+                     redshift_tol_hi=redshift_tol_hi,
+                     xlabel=r'$\log(M_{*}/M_{\odot})$',
+                     ylabel=r'$z$', title=cluster,
+                     xmin=2, xmax=14, ymin=0.2, ymax=0.8)
     
     return
 
