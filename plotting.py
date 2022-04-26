@@ -1092,7 +1092,7 @@ def plot_scatter(xs, ys, color, label, marker, cbar_label='',
                  xlabel=None, ylabel=None, title=None, cmap=cm.rainbow,
                  xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
                  figsizewidth=9.5, figsizeheight=7, scale='linear',
-                 vmin=None, vmax=None,) :
+                 vmin=None, vmax=None) :
     
     global currentFig
     fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
@@ -1106,7 +1106,7 @@ def plot_scatter(xs, ys, color, label, marker, cbar_label='',
     frame = ax.scatter(xs, ys, c=color, marker=marker, label=label, cmap=cmap,
                        edgecolors='grey')
     cbar = plt.colorbar(frame)
-    cbar.set_label(cbar_label, fontsize=15)    
+    cbar.set_label(cbar_label, fontsize=15)
     
     ax.set_yscale(scale)
     ax.set_xscale(scale)

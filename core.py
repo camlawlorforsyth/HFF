@@ -649,7 +649,7 @@ def save_regions(cluster, table) :
         file.write(q_second)
         file.write(third)
         for i in range(len(table)) :
-            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] != 'bcg') :
+            if (table['pop'][i] == 'Q') & (table['id'][i] < 20000) :
                 string = 'circle({},{},{}") # {}\n'.format(
                     str(table['ra'][i]), str(table['dec'][i]),
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
@@ -660,7 +660,7 @@ def save_regions(cluster, table) :
         file.write(sf_second)
         file.write(third)
         for i in range(len(table)) :
-            if (table['pop'][i] == 'SF') & (table['bandtotal'][i] != 'bcg') :
+            if (table['pop'][i] == 'SF') & (table['id'][i] < 20000) :
                 string = 'circle({},{},{}") # {}\n'.format(
                     str(table['ra'][i]), str(table['dec'][i]),
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
@@ -671,7 +671,7 @@ def save_regions(cluster, table) :
         file.write(bCG_second)
         file.write(third)
         for i in range(len(table)) :
-            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] == 'bcg') :
+            if (table['id'][i] > 20000) :
                 string = 'circle({},{},{}") # {}\n'.format(
                     str(table['ra'][i]), str(table['dec'][i]),
                     str(table['flux_radius'][i]*0.06), str(table['id'][i]))
@@ -682,7 +682,7 @@ def save_regions(cluster, table) :
         file.write(q_second)
         file.write('physical\n')
         for i in range(len(table)) :
-            if (table['pop'][i] == 'Q') & (table['bandtotal'][i] == 'bcg') :
+            if (table['id'][i] > 20000) :
                 string = 'box({},{},{},{},0) # {}\n'.format(
                     str(table['x'][i]), str(table['y'][i]),
                     str(table['flux_radius'][i]*10),
