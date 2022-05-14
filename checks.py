@@ -95,6 +95,28 @@ def check_fit_progress() :
     
     return
 
+def check_for_missing_issues() :
+    
+    from astropy.table import Table, setdiff
+    
+    for cluster in ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149',
+                    'a370par', 'a1063par', 'a2744par', 'm416par', 'm717par',
+                    'm1149par'] :
+        
+        old = Table.read('{}/{}_issues.csv'.format(cluster, cluster))
+        old = Table([old['id'], old['pop']], names=('id', 'pop'))
+        
+        new = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
+        new = Table([new['id'], new['pop']], names=('id', 'pop'))
+        
+        unique = setdiff(new, old, keys=['id', 'pop'])
+        print(cluster, len(unique))
+        if len(unique > 0) :
+            unique.pprint(max_lines=-1)
+        print()
+    
+    return
+
 def check_radial_extents() :
     
     HFF = Table.read('output/tables/nbCGs.fits')
@@ -597,7 +619,7 @@ def save_bkgshists(cluster, filters, population) :
     
     return
 
-def save_pngs(cluster, filters, population) :
+def save_pngs(cluster, filters) :
     
     num_filts = len(filters)
     if num_filts == 7 :
@@ -621,9 +643,6 @@ def save_pngs(cluster, filters, population) :
     # open the table of all the objects 
     table = Table.read('{}/{}_sample.fits'.format(cluster, cluster))
     
-    # mask the table based on the population of interest
-    table = table[table['pop'] == population]
-    
     # determine the band flags that are in the catalog
     band_flags = [string for string in table.colnames if 'flag_F' in string]
     
@@ -636,11 +655,19 @@ def save_pngs(cluster, filters, population) :
     for row in flag_table.iterrows() :
         flags.append(list(row))
     
-    IDs = list(table['id'])
+    # next two lines are temporary - May 9th, 2022
+    IDs = table['id']
+    IDs = list(IDs[IDs > 20000])
+    
+    # IDs = list(table['id'])
     for i in range(len(IDs)) :
         segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
                                                            IDs[i])
         segMap = core.open_cutout(segPath, simple=True)
+        
+        bCGsegPath = '{}/cutouts/{}_ID_{}_segmap-bCG.fits'.format(
+            cluster, cluster, IDs[i])
+        bCGsegMap = core.open_cutout(bCGsegPath, simple=True)
         
         # outfile = outDir + '/{}_ID_{}.png'.format(cluster, IDs[i])
         outfile_segmapped = outDirAlt + '/{}_ID_{}.png'.format(cluster, IDs[i])
@@ -653,8 +680,8 @@ def save_pngs(cluster, filters, population) :
             data = core.open_cutout(infile, simple=True)
             # cutout_data.append(data)
             
-            if IDs[i] > 20000:
-                mask = (segMap > 0)
+            if IDs[i] > 20000 :
+                mask = (segMap > 0) | ((bCGsegMap > 0) & (bCGsegMap != IDs[i]))
             else :
                 mask = (segMap > 0) & (segMap != IDs[i])
             segmapped_data = data.copy()

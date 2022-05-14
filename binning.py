@@ -27,7 +27,7 @@ def bin_all(cluster):
         # directory for the bins is available
     
     table = Table.read('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
-    IDs = table['ID']
+    IDs = table['id']
     
     for ID in IDs :
         (annuli_map, smas, smbs, fluxes, errs,
@@ -89,6 +89,8 @@ def annuli_bins(cluster, ID) :
     segMap = open_cutout(
         '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster, ID),
         simple=True)
+    bCGsegMap = open_cutout('{}/cutouts/{}_ID_{}_segmap-bCG.fits'.format(
+        cluster, cluster, ID), simple=True)
     
     eta = 1 - smb/sma # the ellipticity of the ellipse
     
@@ -103,8 +105,8 @@ def annuli_bins(cluster, ID) :
     # mask the copied images based on the segmentation map, but don't mask out
     # the sky
     if ID >= 20000 : # the bCGs aren't in the segmap, so mask any other galaxy
-        new_sci[segMap > 0] = 0
-        new_noise[segMap > 0] = 0
+        new_sci[(segMap > 0) | ((bCGsegMap > 0) & (bCGsegMap != ID))] = 0
+        new_noise[(segMap > 0) | ((bCGsegMap > 0) & (bCGsegMap != ID))] = 0
     else : # for the non-bCGs, mask out pixels associated with other galaxies
         new_sci[(segMap > 0) & (segMap != ID)] = 0
         new_noise[(segMap > 0) & (segMap != ID)] = 0
