@@ -1,6 +1,7 @@
 
 import os
 import numpy as np
+from distutils.util import strtobool
 
 import astropy.constants as const
 from astropy.io import fits
@@ -28,11 +29,15 @@ def combine_with_issues(cluster) :
     issues = Table.read('{}/{}_issues.csv'.format(cluster, cluster))
     
     combined = join(sci_objs, issues, keys='id')
+    combined.rename_column('pop_1', 'pop')
+    combined.remove_column('pop_2')
     
-    # combined = combined[combined['id'] < 20000] # only for non-bCGs
+    combined = combined[combined['id'] < 20000] # only for non-bCGs
     
     # ensure that only galaxies with 'f160w_use' are included
-    combined = combined[combined['f160w_use'] == True]
+    f160w_use = np.array([strtobool(string.lower()) for
+                          string in combined['f160w_use']])
+    combined = combined[f160w_use > 0]
     
     combined.write('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
     
@@ -83,13 +88,13 @@ def determine_rms(segPath, files) :
     
     return rmses
 
-def save_cutouts(cluster, sample_path, filters, rms, files, segPath,
-                 selection, models, redshift_type='z_spec') :
+def save_cutouts(cluster, sample_path, filters, rms, files, segPath, bCGsegPath,
+                 models, redshift_type='z_spec') :
     '''
     Save the cutouts for all science objects in a given filter, as well as
     noise cutouts and segmentation map cutouts. Then move to the next filter,
     saving those cutouts. If there are N filters and M final science objects,
-    this will result in (2*N+1)*M cutout images.
+    this will result in 2*(N+1)*M cutout images.
     
     Returns
     -------
@@ -104,7 +109,7 @@ def save_cutouts(cluster, sample_path, filters, rms, files, segPath,
     redshift = sci_objs[redshift_type]
     ID, r_e = sci_objs['id'], sci_objs['flux_radius']*u.pixel
     sma, smb = sci_objs['a_image'], sci_objs['b_image']
-    pa, object_type = sci_objs['theta_J2000'], sci_objs['pop']
+    pa = sci_objs['theta_J2000']
     
     dictionary = {}
     for i in range(len(filters)) :
@@ -139,38 +144,47 @@ def save_cutouts(cluster, sample_path, filters, rms, files, segPath,
             else :
                 science = science + bcg_model
             
-            if object_type[i] == selection :
-                # calculate the noise for the filter
-                rms = dictionary.get(filt).get('rms')
-                noise = np.sqrt(science/(exposure.value) + rms**2)
-                
-                # science file
-                outfile = '{}/cutouts/{}_ID_{}_{}.fits'.format(
-                    cluster, cluster, str(ID[i]), filt)
-                save_cutout(xx[i], yy[i], extent*r_e[i],
-                            science, outfile, exposure.value,
-                            photfnu.value, scale.value, rms, r_e.value[i],
-                            redshift[i], sma[i], smb[i], pa[i])
-                
-                # noise file
-                noise_outfile = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
-                    cluster, cluster, str(ID[i]), filt)
-                save_cutout(xx[i], yy[i], extent*r_e[i],
-                            noise, noise_outfile, exposure.value,
-                            photfnu.value, scale.value, rms, r_e.value[i],
-                            redshift[i], sma[i], smb[i], pa[i])
+            # calculate the noise for the filter
+            rms = dictionary.get(filt).get('rms')
+            noise = np.sqrt(science/(exposure.value) + rms**2)
+            
+            # science file
+            outfile = '{}/cutouts/{}_ID_{}_{}.fits'.format(
+                cluster, cluster, str(ID[i]), filt)
+            save_cutout(xx[i], yy[i], extent*r_e[i],
+                        science, outfile, exposure.value,
+                        photfnu.value, scale.value, rms, r_e.value[i],
+                        redshift[i], sma[i], smb[i], pa[i])
+            
+            # noise file
+            noise_outfile = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
+                cluster, cluster, str(ID[i]), filt)
+            save_cutout(xx[i], yy[i], extent*r_e[i],
+                        noise, noise_outfile, exposure.value,
+                        photfnu.value, scale.value, rms, r_e.value[i],
+                        redshift[i], sma[i], smb[i], pa[i])
     
     # segmentation map
     for i in range(len(sci_objs)) :
-        if object_type[i] == selection :
-            with fits.open(segPath) as hdu :
-                segMap = hdu[0].data
-            segmap_outfile = '{}/cutouts/{}_ID_{}_segmap.fits'.format(
-                cluster, cluster, str(ID[i]))
-            save_cutout(xx[i], yy[i], extent*r_e[i],
-                        segMap, segmap_outfile, -999,
-                        -999, scale.value, -999, r_e.value[i],
-                        redshift[i], sma[i], smb[i], pa[i])
+        with fits.open(segPath) as hdu :
+            segMap = hdu[0].data
+        segmap_outfile = '{}/cutouts/{}_ID_{}_segmap.fits'.format(
+            cluster, cluster, str(ID[i]))
+        save_cutout(xx[i], yy[i], extent*r_e[i],
+                    segMap, segmap_outfile, -999,
+                    -999, scale.value, -999, r_e.value[i],
+                    redshift[i], sma[i], smb[i], pa[i])
+    
+    # bCG segmentation map
+    for i in range(len(sci_objs)) :
+        with fits.open(bCGsegPath) as hdu :
+            bCGsegMap = hdu[0].data
+        bCG_segmap_outfile = '{}/cutouts/{}_ID_{}_segmap-bCG.fits'.format(
+            cluster, cluster, str(ID[i]))
+        save_cutout(xx[i], yy[i], extent*r_e[i],
+                    bCGsegMap, bCG_segmap_outfile, -999,
+                    -999, scale.value, -999, r_e.value[i],
+                    redshift[i], sma[i], smb[i], pa[i])
     
     return
 

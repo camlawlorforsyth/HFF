@@ -2,9 +2,11 @@
 import os
 import numpy as np
 
+import astropy.constants as const
 from astropy.io import fits
 from astropy.nddata import Cutout2D
 from astropy.table import hstack, join, Table
+import astropy.units as u
 from scipy import interpolate
 
 import plotting as plt
@@ -226,7 +228,7 @@ def create_blank_models() :
     
     return
 
-def determine_initial_sample(cluster, redshift, key='id', redshift_type='z_spec',
+def determine_initial_sample(cluster, redshift, sigma, key='id', redshift_type='z_best',
                              redshift_tol_lo=0.01, redshift_tol_hi=0.01,
                              others=False) :
     '''
@@ -265,17 +267,40 @@ def determine_initial_sample(cluster, redshift, key='id', redshift_type='z_spec'
     # join the data based on a specific key
     combined = join(fastoutput, photometry, keys=key)
     
-    # mask the data based on a good spectroscopic redshift, then remove any
+    # use the best redshift available for the field (ie. foreground/background
+    # galaxies for the cluster pointings) and cluster galaxies
+    z_best = []
+    for i in range(len(combined)) :
+        if combined['z_spec'][i] > 0 :
+            z_best.append(combined['z_spec'][i])
+        else :
+            z_best.append(combined['z'][i])
+    combined['z_best'] = z_best
+    
+    # determine the environment for the galaxies
+    delta_z = (3*sigma/const.c.to(u.km/u.s))*(1 + redshift)
+    env = []
+    for i in range(len(combined)) :
+        if ((combined['z_best'][i] >= redshift - delta_z) &
+            (combined['z_best'][i] <= redshift + delta_z)) :
+            env.append('cluster')
+        else :
+            env.append('field')
+    combined['env'] = env
+    
+    combined['cluster'] = [cluster]*len(combined)
+    
+    # mask the data based on a good redshift, then remove any
     # point sources and "uncertain" sources (as per Shipley+2018), then
     # remove not "OK" sources (as per Shipley+2018), then remove sources
     # that are not in the footprint of the F160W image, then remove not-massive
     # objects, and finally mask based on redshift
-    mask = ((combined['{}'.format(redshift_type)] > 0) &
+    mask = ((combined[redshift_type] > 0) &
             (combined['star_flag'] == 0) & (combined['use_phot'] == 1) &
             (combined['flag_F160W'] != -1) & (combined['flag_F160W'] != -99) &
             (combined['lmass'] >= 8) &
-            (combined['{}'.format(redshift_type)] >= redshift-redshift_tol_lo) &
-            (combined['{}'.format(redshift_type)] <= redshift+redshift_tol_hi))
+            (combined[redshift_type] >= redshift-redshift_tol_lo) &
+            (combined[redshift_type] <= redshift+redshift_tol_hi))
     
     if others :
         determine_other_sample(combined, combined[mask], redshift, redshift_type,
@@ -283,11 +308,11 @@ def determine_initial_sample(cluster, redshift, key='id', redshift_type='z_spec'
     
     return combined[mask]
 
-def determine_final_sample(cluster, redshift, first_path, second_path,
+def determine_final_sample(cluster, redshift, sigma, first_path, second_path,
                            key='id', FUV_filtnum=218, U_filtnum=153,
                            V_filtnum=155, J_filtnum=161,
                            redshift_tol_lo=0.01, redshift_tol_hi=0.01,
-                           redshift_type='z_spec', plot_all=False, plot_uvj=False,
+                           redshift_type='z_best', plot_all=False, plot_uvj=False,
                            write_final_objs=False, write_regions=False,
                            selection='FUVVJ', verbose=False) :
     '''
@@ -314,7 +339,7 @@ def determine_final_sample(cluster, redshift, first_path, second_path,
     J_filtnum : int, optional
         Number describing J filter color indices file. The default is 161.
     redshift_type : str, optional
-        Flag to use spectroscopic redshifts. The default is 'z_spec'.
+        Flag to use spectroscopic redshifts. The default is 'z_best'.
     redshift_tol_lo : float, optional
         The low redshift tolerance to use. The default is 0.01.
     redshift_tol_hi : float, optional
@@ -336,58 +361,59 @@ def determine_final_sample(cluster, redshift, first_path, second_path,
     
     '''
     
-    initial = determine_initial_sample(cluster, redshift, key=key,
+    initial = determine_initial_sample(cluster, redshift, sigma, key=key,
                                        redshift_type=redshift_type,
                                        redshift_tol_lo=redshift_tol_lo,
                                        redshift_tol_hi=redshift_tol_hi)
     colors = combine_colors(first_path, second_path, FUV_filtnum, U_filtnum,
                             V_filtnum, J_filtnum, cluster, key=key)
-    final = join(initial, colors, keys=key)
-    
-    # determine colors and set values for the different color-color diagrams
-    if selection == 'UVJ' : # using values from Muzzin et al. 2013
-        xs = final['M_AB_V'] - final['M_AB_J']
-        ys = final['M_AB_U'] - final['M_AB_V']
-        slope, intercept, horiz, vert = 0.88, 0.69, 1.3, 1.5
-    else : # using values from Leja et al. 2019b
-        xs = final['M_AB_V'] - final['M_AB_J']
-        ys = final['M_AB_FUV'] - final['M_AB_V']
-        slope, intercept, horiz, vert = 3.24, 0.32, 3.45, 1.56
-    
-    first_knee, second_knee = (horiz - intercept)/slope, vert
-    
-    # define the quiescent region
-    corner = ( ((xs <= first_knee) & (ys >= horiz)) |
-               ( ((xs >= first_knee) & (xs <= second_knee))
-                 & (ys >= slope*xs + intercept)) )
-    
-    # create a column describing the population type
-    pop_type = np.empty(len(final), dtype=str)
-    pop_type[corner], pop_type[~corner] = 'Q', 'S'
-    pop_type  = np.char.replace(pop_type, 'S', 'SF')
-    final['pop'] = pop_type
-    
-    # QG_mask, SF_mask = (final['pop'] == 'Q'), (final['pop'] == 'SF')
-    # QGs, SFGs = final.copy(), final.copy()
-    # QGs, SFGs = QGs[QG_mask], SFGs[SF_mask]
-    # print('{}: {} QGs, {} SFGs'.format(cluster, len(QGs), len(SFGs)))
-    
-    if plot_uvj :
-        plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
-                     final['M_AB_U'] - final['M_AB_V'],
-                     xlabel=r'$V - J$', ylabel=r'$U - V$', title=cluster,
-                     xmin=0, xmax=1.9, ymin=0, ymax=2.4)
-    
-    if write_final_objs :
-        final_objs_file = '{}/{}_sample.fits'.format(cluster, cluster)
-        final.write(final_objs_file)
-        if verbose :
-            print('Saved: Final objects to fits file.')
-    
-    if write_regions :
-        save_regions(cluster, final)
-        if verbose :
-            print('Saved: Regions to file.')
+    if len(initial) > 0 :
+        final = join(initial, colors, keys=key)
+        
+        # determine colors and set values for the different color-color diagrams
+        if selection == 'UVJ' : # using values from Muzzin et al. 2013
+            xs = final['M_AB_V'] - final['M_AB_J']
+            ys = final['M_AB_U'] - final['M_AB_V']
+            slope, intercept, horiz, vert = 0.88, 0.69, 1.3, 1.5
+        else : # using values from Leja et al. 2019b
+            xs = final['M_AB_V'] - final['M_AB_J']
+            ys = final['M_AB_FUV'] - final['M_AB_V']
+            slope, intercept, horiz, vert = 3.24, 0.32, 3.45, 1.56
+        
+        first_knee, second_knee = (horiz - intercept)/slope, vert
+        
+        # define the quiescent region
+        corner = ( ((xs <= first_knee) & (ys >= horiz)) |
+                   ( ((xs >= first_knee) & (xs <= second_knee))
+                     & (ys >= slope*xs + intercept)) )
+        
+        # create a column describing the population type
+        pop_type = np.empty(len(final), dtype=str)
+        pop_type[corner], pop_type[~corner] = 'Q', 'S'
+        pop_type  = np.char.replace(pop_type, 'S', 'SF')
+        final['pop'] = pop_type
+        
+        # QG_mask, SF_mask = (final['pop'] == 'Q'), (final['pop'] == 'SF')
+        # QGs, SFGs = final.copy(), final.copy()
+        # QGs, SFGs = QGs[QG_mask], SFGs[SF_mask]
+        # print('{}: {} QGs, {} SFGs'.format(cluster, len(QGs), len(SFGs)))
+        
+        if plot_uvj :
+            plt.plot_UVJ(final['M_AB_V'] - final['M_AB_J'],
+                         final['M_AB_U'] - final['M_AB_V'],
+                         xlabel=r'$V - J$', ylabel=r'$U - V$', title=cluster,
+                         xmin=0, xmax=1.9, ymin=0, ymax=2.4)
+        
+        if write_final_objs :
+            final_objs_file = '{}/{}_sample.fits'.format(cluster, cluster)
+            final.write(final_objs_file)
+            if verbose :
+                print('Saved: Final objects to fits file.')
+        
+        if write_regions :
+            save_regions(cluster, final)
+            if verbose :
+                print('Saved: Regions to file.')
     
     return
 
@@ -634,6 +660,7 @@ def save_regions(cluster, table) :
     sf_region_file = '{}/regions/{}_final_SFGs_R_e.reg'.format(cluster, cluster)
     bCG_region_file = '{}/regions/{}_final_bCGs_R_e.reg'.format(cluster, cluster)
     bCG_sqr_file = '{}/regions/{}_bCGs_sqr.reg'.format(cluster, cluster)
+    bCG_loc_file = '{}/regions/{}_bCGs_loc.reg'.format(cluster, cluster)
     
     first = '# Region file format: DS9 version 4.1\n'
     q_second = ('global color=red width=2 select=1 ' +
@@ -687,6 +714,16 @@ def save_regions(cluster, table) :
                     str(table['x'][i]), str(table['y'][i]),
                     str(table['flux_radius'][i]*10),
                     str(table['flux_radius'][i]*10), str(table['id'][i]))
+                file.write(string)
+    
+    with open(bCG_loc_file, 'a+') as file :
+        file.write(first)
+        file.write(bCG_second)
+        file.write(third)
+        for i in range(len(table)) :
+            if (table['id'][i] > 20000) :
+                string = 'text({},{}) # text={{{}}}\n'.format(
+                    str(table['ra'][i]), str(table['dec'][i]), str(table['id'][i]))
                 file.write(string)
     
     return

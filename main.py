@@ -68,59 +68,56 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     # CLUSTERS
     
     if cluster == 'a370' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a370_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a370_params()
     
     if cluster == 'a1063' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a1063_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a1063_params()
     
     if cluster == 'a2744' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a2744_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a2744_params()
     
     if cluster == 'm416' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m416_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m416_params()
     
     if cluster == 'm717' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m717_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m717_params()
     
     if cluster == 'm1149' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m1149_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m1149_params()
     
     # PARALLEL FIELDS
     
     if cluster == 'a370par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a370par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a370par_params()
     
     if cluster == 'a1063par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a1063par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a1063par_params()
     
     if cluster == 'a2744par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.a2744par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.a2744par_params()
     
     if cluster == 'm416par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m416par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m416par_params()
     
     if cluster == 'm717par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m717par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m717par_params()
     
     if cluster == 'm1149par' :
-        (redshift, delta_z_lo, delta_z_hi, force_spec, path1, path2,
-         filters, segPath, files, models, RMS) = initial.m1149par_params()
+        (redshift, sigma, delta_z_lo, delta_z_hi, redshift_type, path1, path2,
+         filters, segPath, bCGsegPath, files, models, RMS) = initial.m1149par_params()
     
     # START
-    
-    population = 'Q' # only consider quiescent galaxies
-    subpop = 'non-bCG' # only consider the non bCG quiescent galaxies
     
     # ensure the output directory is available
     os.makedirs('{}'.format(cluster), exist_ok=True) 
@@ -128,19 +125,16 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
         print('Created: Cluster directory.')
     
     # determine the final science objects, based on flags in the catalogs
-    core.determine_finalObjs_w_color(cluster, redshift, path1, path2,
-                                     redshift_tol_lo=delta_z_lo,
-                                     redshift_tol_hi=delta_z_hi,
-                                     z_spec=force_spec,
-                                     plot_all=False, plot_uvj=False,
-                                     write_final_objs=True,
-                                     write_regions=True, selection='FUVVJ',
-                                     verbose=verbose)
-    
-    # save a file containing information about the filterset for the cluster
-    field.save_filterset(cluster, filters)
+    core.determine_final_sample(cluster, redshift, sigma, path1, path2,
+                                redshift_tol_lo=delta_z_lo,
+                                redshift_tol_hi=delta_z_hi,
+                                redshift_type='z_spec',
+                                plot_all=False, plot_uvj=False,
+                                write_final_objs=True,
+                                write_regions=True, selection='FUVVJ',
+                                verbose=verbose)
     if verbose :
-        print('Saved: Filterset to file.')
+        print('Determined and saved: Sample and population demographics to file.')
     
     # determine the rms values for each filter
     if calculate_rms :
@@ -152,16 +146,16 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
         print('Determined: Background RMS.')
     
     # save all the cutouts for all the science objects
-    final_objs_path = '{}/{}_final_objects.fits'.format(cluster, cluster)
-    field.save_cutouts(cluster, final_objs_path, filters, rms, files, segPath,
-                       population, models, z_spec=force_spec)
+    sample_path = '{}/{}_sample.fits'.format(cluster, cluster)
+    field.save_cutouts(cluster, sample_path, filters, rms, files, segPath,
+                       bCGsegPath, models, redshift_type=redshift_type)
     if verbose :
         print('Saved: All science, noise, and segmentation map cutouts.')
     
     # save pngs of the cutouts for visual inspection
-    checks.save_pngs(cluster, filters, population)
+    checks.save_pngs(cluster, filters)
     if verbose :
-        print('Saved: Images of cutouts for visial inspection.')
+        print('Saved: Images of cutouts for visual inspection.')
     
     # now visually inspect all the cutouts to ensure the final objects are
     # reasonable and have no glaring issues, saving issues to
@@ -180,53 +174,44 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     
     # then determine the flux for every bin for each galaxy, saving the
     # photometry for each galaxy into a separate file
-    photometry.determine_fluxes(cluster, filters, subpop)
+    photometry.determine_fluxes(cluster, filters)
     if verbose :
         print('Saved: Photometries to fits files.')
     
-    # plot and save the surface brightness profiles for every filter, using
-    # the photometry file saved above
-    checks.save_sbps(cluster, population)
-    if verbose :
-        print('Saved: Surface brightness profiles to file.')
-    
-    # plot and save the SEDs for every annulus/radial bin, using the
-    # photometry file saved above
-    checks.save_seds(cluster, population)
-    if verbose :
-        print('Saved: Spectral energy distributions to file.')
-    
-    # plot and save histograms of the background pixels to verify that the
-    # background subtraction was completed correctly
-    checks.save_bkgshists(cluster, filters, population)
-    if verbose :
-        print('Saved: Background pixel histograms to file.')
-    
     # END
-    if verbose :
-        print('\n{} complete.'.format(cluster))
-    
-    # then on linux, move to the `hff/` directory, and run
-    # python prospector.py
     
     '''
-    Note: the sample as determined above from the `determine_finalObjs_w_color`
-    function returns 421 non-bCG quiescent cluster galaxies.
+    Note: the sample as determined above from the `determine_final_sample`
+    function returns: 1) 668 quiescent galaxies
+                      2) 179 star forming galaxies
+                      3) 733 cluster galaxies
+                      4) 114 field galaxies
+    for a total of 1124 galaxies (696 QGs and 428 SFGs)
     
-    Of these, 6 should be removed in the step performed by the
+    Of these, 13 should be removed in the step performed by the
     `combine_with_issues` function, as these galaxies all have incomplete
     F160W coverage, and so reliable bins/annuli cannot be determined. These
     galaxies are:
-    M717 ID 3503 (14 bins from erroneously including it previously)
-    M717 ID 3896 (4 bins)
-    M717 ID 4819 (14 bins)
-    M717 ID 5357 (14 bins)
-    M1149 ID 1678 (8 bins)
-    M1149 ID 2737 (10 bins)
+    A1063 ID 20060 (not detected in segmentation map)
+    M717 ID 3503
+    M717 ID 3896
+    M717 ID 4819
+    M717 ID 5357
+    M1149 ID 1678
+    M1149 ID 2737
+    A370par ID 848
+    A2744par ID 1291
+    A2744par ID 3900
+    M717par ID 5322
+    M1149par ID 5104
+    M1149par ID 5123
+    M1149par ID 5208
     
-    Following this, 12 should be further removed in the step performed by the
-    `binning.bin_all` function, as these galaxies are all too dim to have even
-    a single bin/annulus determined. These galaxies are:
+    Following this, 42 should be further removed in the step performed by the
+    `photometry.determine_fluxes` function, as these galaxies are all too dim
+    to have even a single bin/annulus determined (but note that they will have
+    *_annuli.npz files, but will not have information populated into the
+    bins_image arrays included in those files). These galaxies are:
     A1063 ID 3089
     A1063 ID 3426
     A1063 ID 4556
@@ -239,8 +224,38 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     A1063 ID 5638
     A1063 ID 5806
     A2744 ID 4358
+    A370par 3178
+    A2744par 1188
+    M416par 1225
+    M416par 1582
+    M416par 1597
+    M416par 1793
+    M416par 1907
+    M416par 2393
+    M416par 2464
+    M416par 2752
+    M416par 3795
+    M416par 3904
+    M416par 4068
+    M416par 4327
+    M416par 4429
+    M416par 5019
+    M416par 5570
+    M416par 5606
+    M416par 5685
+    M416par 5714
+    M416par 6011
+    M416par 6107
+    M416par 6538
+    M416par 6581
+    M416par 6672
+    M717par 4033
+    M717par 4228
+    M717par 4852
+    M717par 4871
+    M1149par 2788
     
-    Lastly, 10 should be finally removed manually, as these galaxies all have
+    Lastly, 32 should be finally removed manually, as these galaxies all have
     only a single bin/annulus. These galaxies are:
     A1063 ID 2601
     A1063 ID 2959
@@ -252,9 +267,32 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     A1063 ID 5083
     A2744 ID 3892
     A2744 ID 4655
+    A370par 2188
+    A370par 3364
+    A370par 5162
+    A1063par 1611
+    A1063par 2199
+    A1063par 5228
+    A2744par 1716
+    A2744par 2351
+    A2744par 4252
+    M416par 3395
+    M416par 3736
+    M416par 4628
+    M416par 4791
+    M717par 2233
+    M717par 2508
+    M717par 2816
+    M717par 2916
+    M717par 3280
+    M717par 3831
+    M717par 5126
+    M1149par 2529
+    M1149par 3001
     
     This results in 393 galaxies that should be in the final sample for the
-    non-bCG quiescent cluster galaxies.
+    non-bCG quiescent cluster galaxies, and 296 galaxies for the star formers
+    and non-bCG quiescent galaxies in the field, for a total of 689.
     '''
     
     return
@@ -298,6 +336,24 @@ def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False,
     if bins :
         checks.check_all_bins()
     
+    # plot and save the surface brightness profiles for every filter, using
+    # the photometry file saved above
+    checks.save_sbps(cluster, population)
+    if verbose :
+        print('Saved: Surface brightness profiles to file.')
+    
+    # plot and save the SEDs for every annulus/radial bin, using the
+    # photometry file saved above
+    checks.save_seds(cluster, population)
+    if verbose :
+        print('Saved: Spectral energy distributions to file.')
+    
+    # plot and save histograms of the background pixels to verify that the
+    # background subtraction was completed correctly
+    checks.save_bkgshists(cluster, filters, population)
+    if verbose :
+        print('Saved: Background pixel histograms to file.')
+    
     return
 
 import warnings
@@ -310,8 +366,8 @@ warnings.filterwarnings('ignore')
 # main('m717')
 # main('m1149')
 
-# main('a370par')
-# main('a1063par')
+# main('a370par') # 0 galaxies in the sample for this parallel field
+# main('a1063par') # 0 galaxies in the sample for this parallel field
 # main('a2744par')
 # main('m416par')
 # main('m717par')
@@ -340,53 +396,3 @@ warnings.filterwarnings('ignore')
 # agelims = np.log10(lims)
 # agelims[0] = 0
 # agebins = np.array([agelims[:-1], agelims[1:]]).T
-
-# import numpy as np
-# factors = [2.181495551643033, 2.1883236657000866, 1.7261923253729665,
-#            1.4134601654681689, 1.7324986472791672, 1.7114998726238,
-#            1.5857568889472982, 2.6483300822937696, 2.397462563618582,
-#            2.8059658333596764, 2.18455305916632, 2.077538303832598,
-#            1.9652980170768732, 1.9316625789196562, 1.9315518515817243,
-#            1.8138795439082092, 1.392829120841449, 1.4227200431836113,
-#            1.3915003268933417, 1.4241272366253315, 1.421152644222854,
-#            1.3549649789671274, 1.4192680810266645, 2.170888909291974,
-#            2.45585483722647, 2.3614106449535206, 2.1700191051298745,
-#            2.219562701601038, 2.1802716636763524, 2.1798622548063715,
-#            1.386939736638916, 1.3962530131418174, 1.3956817157033081,
-#            2.421668950737322, 2.8516138535540807, 2.7287068061679354,
-#            2.713726292101576, 1.9844135844148416, 1.9386668270745775,
-#            1.9389045227865715, 2.199571064145755, 1.4193668752069424,
-#            1.42821163096129, 1.478674235780314, 1.4284505218185852,
-#            1.4356259731907939, 1.4058119574285082, 1.428014667786318,
-#            2.214759619956099, 2.535955887224781, 2.239966316587822,
-#            2.2560110851031854, 2.217309670710604, 1.9680403862972147,
-#            1.8939748331238828, 1.8974302895914317, 2.1879447637719953,
-#            1.399918103436626, 1.4409934384603484, 1.536614544618529,
-#            1.3661944057852728, 1.4320088314942003, 1.4346914603552603,
-#            1.3219041910065046, 1.4388740019642372, 2.1262681548096305,
-#            2.569061713530438, 2.2079024297972043, 2.12912125366805,
-#            2.124302015834728, 2.129775821991798, 2.0900351323184663,
-#            2.0915760347156476, 2.358438881906315, 1.663681474153013,
-#            1.531419851673137, 1.6484013034043448, 1.664127294509825,
-#            1.538556155560637, 1.536506163681755, 1.6299226536398579,
-#            1.5359034863153715, 2.21734593712219, 2.713042736892904,
-#            2.0011043985983497, 2.6713350943262917, 1.9946837285777617]
-# print(len(factors), np.mean(factors), np.median(factors))
-
-# import numpy as np
-# pfactors = [1.6156726833307276, 1.6162379269626066, 1.6135370037225696,
-#             2.539293197916151, 2.5454421025138343, 2.5460908723927083,
-#             2.5355020590645023, 1.5958949344690876, 1.595828787314081,
-#             1.6086396207497886, 2.5200011299491325, 2.1824981528326868,
-#             2.5210049093384512, 2.1790724593648436, 1.6052631295505537,
-#             1.5605351037936066, 1.6198546113535777, 2.58298961785788,
-#             2.5698491616872534, 2.5722946900624084, 2.570783754535875,
-#             1.6291833844736454, 1.6302878438361792, 1.317603582205626,
-#             1.6274413374833114, 1.3176681380989899, 2.600486169697143,
-#             2.590394150479253, 2.5893631111878586, 2.586784746916275,
-#             1.5550798933230554, 1.5552989059082531, 1.5816774306856214,
-#             2.6480808209830102, 2.289343226248264, 2.6508573986473563,
-#             2.274597884284631, 1.6136376564731885, 1.4570434258537033,
-#             1.459570978879453, 2.5368405540893133, 2.539279938183213,
-#             2.5389961993265047, 2.4505216964809966]
-# print(len(pfactors), np.mean(pfactors), np.median(pfactors))
