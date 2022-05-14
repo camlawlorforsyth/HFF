@@ -12,7 +12,7 @@ def sample_randomly(cluster, filt, dims) :
     
     if cluster[0] == 'a' :
         name = 'abell' + cluster[1:]
-    if cluster == 'm' :
+    if cluster[0] == 'm' :
         name = 'macs0' + cluster[1:]
     
     if name == 'macs01149' :
