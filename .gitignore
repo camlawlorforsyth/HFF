@@ -149,6 +149,7 @@ dmypy.json
 *.rf
 *.rf.param
 *.save
+*_bcgs_out_detection.sex
 *.sex.gz
 *.tar
 *.temp_sed
@@ -168,3 +169,11 @@ dmypy.json
 *.tar.gz
 *.txt
 *.h5
+
+# files relating to running Source Extractor
+config.sex
+default.conv
+default.param
+default.sex
+extended.sex
+gauss_4.0_7x7.conv
