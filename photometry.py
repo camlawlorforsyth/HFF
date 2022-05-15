@@ -33,7 +33,6 @@ def determine_fluxes(cluster, filters) :
     
     use_table = Table.read('{}/{}_sample-with-use-cols.fits'.format(
         cluster, cluster))
-    use_table = use_table[use_table['id'] < 20000]
     
     use_columns = [col for col in use_table.colnames if col.endswith('_use')]
     IDs = use_table['id']
@@ -77,20 +76,20 @@ def determine_fluxes(cluster, filters) :
             photometry['J_mag'] = [J_mag]*int(numBins)
             
             for filt in filters :
-                sci_file = '{}/cutouts/{}_ID_{}_{}.fits'.format(cluster,
-                                                                cluster, ID,
-                                                                filt)
-                noise_file = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(cluster,
-                                                                        cluster,
-                                                                        ID, filt)
-                segmap_file = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster,
-                                                                       cluster,
-                                                                       ID)
+                sci_file = '{}/cutouts/{}_ID_{}_{}.fits'.format(
+                    cluster, cluster, ID, filt)
+                noise_file = '{}/cutouts/{}_ID_{}_{}_noise.fits'.format(
+                    cluster, cluster, ID, filt)
+                segmap_file = '{}/cutouts/{}_ID_{}_segmap.fits'.format(
+                    cluster, cluster, ID)
+                bcg_segmap_file = '{}/cutouts/{}_ID_{}_segmap-bCG.fits'.format(
+                    cluster, cluster, ID)
                 
                 (sci, dim, photfnu, r_e,
                  redshift, sma, smb, pa) = open_cutout(sci_file)
-                noise, _, _, _, _, _, _, _ = open_cutout(noise_file)
-                segMap, _, _, _, _, _, _, _ = open_cutout(segmap_file)
+                noise = open_cutout(noise_file, simple=True)
+                segMap = open_cutout(segmap_file, simple=True)
+                bCGsegMap = open_cutout(bcg_segmap_file, simple=True)
                 
                 # make a copy of the science image and noise image
                 new_sci = sci.copy()
@@ -98,9 +97,9 @@ def determine_fluxes(cluster, filters) :
                 
                 # mask the copied images based on the segmentation map, but
                 # don't mask out the sky
-                if ID >= 20000 : # the bCGs aren't in the segmap, so mask
-                    new_sci[segMap > 0] = 0 # any other galaxy
-                    new_noise[segMap > 0] = 0
+                if ID >= 20000 : # the bCGs aren't in the segmap, so mask any other galaxy
+                    new_sci[(segMap > 0) | ((bCGsegMap > 0) & (bCGsegMap != ID))] = 0
+                    new_noise[(segMap > 0) | ((bCGsegMap > 0) & (bCGsegMap != ID))] = 0
                 else : # for the non-bCGs, mask out pixels associated with
                     new_sci[(segMap > 0) & (segMap != ID)] = 0 # other galaxies
                     new_noise[(segMap > 0) & (segMap != ID)] = 0
