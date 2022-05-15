@@ -288,6 +288,33 @@ def check_total_flux(filt) :
     
     return
 
+def concatenate() :
+    
+    a370 = Table.read('a370/a370_sample-with-use-cols-and-bins.fits')
+    a1063 = Table.read('a1063/a1063_sample-with-use-cols-and-bins.fits')
+    a2744 = Table.read('a2744/a2744_sample-with-use-cols-and-bins.fits')
+    m416 = Table.read('m416/m416_sample-with-use-cols-and-bins.fits')
+    m717 = Table.read('m717/m717_sample-with-use-cols-and-bins.fits')
+    m1149 = Table.read('m1149/m1149_sample-with-use-cols-and-bins.fits')
+    
+    a2744par = Table.read('a2744par/a2744par_sample-with-use-cols-and-bins.fits')
+    m416par = Table.read('m416par/m416par_sample-with-use-cols-and-bins.fits')
+    m717par = Table.read('m717par/m717par_sample-with-use-cols-and-bins.fits')
+    m1149par = Table.read('m1149par/m1149par_sample-with-use-cols-and-bins.fits')
+    
+    sample = vstack([a370, a1063, a2744, m416, m717, m1149,
+                     a2744par, m416par, m717par, m1149par])
+    sample.write('output/tables/sample-with-use-cols-and-bins.fits')
+    
+    small = sample['cluster', 'id', 'z', 'z_spec', 'z_best', 'env', 'lmass',
+                   'lsfr', 'lssfr', 'ra', 'dec',
+                   'M_AB_FUV', 'M_AB_U', 'M_AB_V', 'M_AB_J', 'pop', 'bins']
+    small.write('output/tables/sample_final.fits')
+    
+    return
+
+concatenate()
+
 def concatenate_all(both=False, save=False) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
@@ -655,11 +682,7 @@ def save_pngs(cluster, filters) :
     for row in flag_table.iterrows() :
         flags.append(list(row))
     
-    # next two lines are temporary - May 9th, 2022
-    IDs = table['id']
-    IDs = list(IDs[IDs > 20000])
-    
-    # IDs = list(table['id'])
+    IDs = list(table['id'])
     for i in range(len(IDs)) :
         segPath = '{}/cutouts/{}_ID_{}_segmap.fits'.format(cluster, cluster,
                                                            IDs[i])

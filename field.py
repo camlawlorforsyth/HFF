@@ -29,10 +29,6 @@ def combine_with_issues(cluster) :
     issues = Table.read('{}/{}_issues.csv'.format(cluster, cluster))
     
     combined = join(sci_objs, issues, keys='id')
-    combined.rename_column('pop_1', 'pop')
-    combined.remove_column('pop_2')
-    
-    combined = combined[combined['id'] < 20000] # only for non-bCGs
     
     # ensure that only galaxies with 'f160w_use' are included
     f160w_use = np.array([strtobool(string.lower()) for
@@ -40,6 +36,30 @@ def combine_with_issues(cluster) :
     combined = combined[f160w_use > 0]
     
     combined.write('{}/{}_sample-with-use-cols.fits'.format(cluster, cluster))
+    
+    return
+
+def check_number_of_bins(cluster) :
+    # Check for galaxies that don't have a photometry file, and therefore have
+    # no bins. Also check for any galaxies that only have a single bin.
+    
+    table = Table.read('{}/{}_sample-with-use-cols.fits'.format(
+        cluster, cluster))
+    
+    bins = []
+    for ID in table['id'] :
+        phot_file = '{}/photometry/{}_ID_{}_photometry.fits'.format(
+            cluster, cluster, ID)
+        if os.path.exists(phot_file) :
+            phot = Table.read(phot_file)
+            bins.append(len(phot))
+        else :
+            bins.append(0)
+    
+    table['bins'] = bins
+    table = table[table['bins'] > 1]
+    table.write('{}/{}_sample-with-use-cols-and-bins.fits'.format(
+        cluster, cluster))
     
     return
 

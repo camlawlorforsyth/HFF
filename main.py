@@ -178,6 +178,12 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
     if verbose :
         print('Saved: Photometries to fits files.')
     
+    # finally, check for galaxies that don't have any bins or only a single bin,
+    # saving an updated sample file for galaxies that have at least two bins
+    field.check_number_of_bins(cluster)
+    if verbose :
+        print('Saved: Updated sample file.')
+    
     # END
     
     '''
@@ -186,113 +192,97 @@ def main(cluster, calculate_rms=False, verbose=False, vorbin=False) :
                       2) 179 star forming galaxies
                       3) 733 cluster galaxies
                       4) 114 field galaxies
-    for a total of 1124 galaxies (696 QGs and 428 SFGs)
+    for a total of 847 galaxies.
     
-    Of these, 13 should be removed in the step performed by the
-    `combine_with_issues` function, as these galaxies all have incomplete
-    F160W coverage, and so reliable bins/annuli cannot be determined. These
-    galaxies are:
-    A1063 ID 20060 (not detected in segmentation map)
-    M717 ID 3503
-    M717 ID 3896
-    M717 ID 4819
-    M717 ID 5357
-    M1149 ID 1678
-    M1149 ID 2737
-    A370par ID 848
-    A2744par ID 1291
-    A2744par ID 3900
-    M717par ID 5322
-    M1149par ID 5104
-    M1149par ID 5123
-    M1149par ID 5208
+    Of these, 32 should be removed in the step performed by the
+    `combine_with_issues` function, as these galaxies all have incomplete or
+    poor F160W coverage, and so reliable bins/annuli cannot be determined.
+    These galaxies are:
+    a370 ID 20001
+    a1063 ID 20005
+    a1063 ID 20016
+    a1063 ID 20023
+    a1063 ID 20024
+    a1063 ID 20025
+    a1063 ID 20056
+    a1063 ID 20058
+    a1063 ID 20059
+    a1063 ID 20060 (not detected in segmentation map)
+    a2744 ID 20002
+    a2744 ID 20005
+    a2744 ID 20008
+    a2744 ID 20030
+    a2744 ID 20036
+    m416 ID 20001
+    m416 ID 20002
+    m416 ID 20003
+    m416 ID 20024
+    m717 ID 905
+    m717 ID 3896
+    m717 ID 4819
+    m717 ID 20004
+    m717 ID 20005
+    m1149 ID 212
+    m1149 ID 1678
+    m1149 ID 2737
+    m1149 ID 20002
+    m1149 ID 20003
+    m1149 ID 20004
+    a2744par ID 4502
+    m1149par ID 5208
     
-    Following this, 42 should be further removed in the step performed by the
+    Following this, 19 should be further removed in the step performed by the
     `photometry.determine_fluxes` function, as these galaxies are all too dim
     to have even a single bin/annulus determined (but note that they will have
     *_annuli.npz files, but will not have information populated into the
     bins_image arrays included in those files). These galaxies are:
-    A1063 ID 3089
-    A1063 ID 3426
-    A1063 ID 4556
-    A1063 ID 4746
-    A1063 ID 4751
-    A1063 ID 4755
-    A1063 ID 5090
-    A1063 ID 5188
-    A1063 ID 5397
-    A1063 ID 5638
-    A1063 ID 5806
-    A2744 ID 4358
-    A370par 3178
-    A2744par 1188
-    M416par 1225
-    M416par 1582
-    M416par 1597
-    M416par 1793
-    M416par 1907
-    M416par 2393
-    M416par 2464
-    M416par 2752
-    M416par 3795
-    M416par 3904
-    M416par 4068
-    M416par 4327
-    M416par 4429
-    M416par 5019
-    M416par 5570
-    M416par 5606
-    M416par 5685
-    M416par 5714
-    M416par 6011
-    M416par 6107
-    M416par 6538
-    M416par 6581
-    M416par 6672
-    M717par 4033
-    M717par 4228
-    M717par 4852
-    M717par 4871
-    M1149par 2788
+    a370 ID 2205
+    a1063 ID 3030
+    a1063 ID 3089
+    a1063 ID 3426
+    a1063 ID 4556
+    a1063 ID 4746
+    a1063 ID 4751
+    a1063 ID 4755
+    a1063 ID 4761
+    a1063 ID 5090
+    a1063 ID 5160
+    a1063 ID 5188
+    a1063 ID 5397
+    a1063 ID 5638
+    a1063 ID 5705
+    a1063 ID 5806
+    a1063 ID 6178
+    a2744 ID 4358
+    m1149 ID 4316
     
-    Lastly, 32 should be finally removed manually, as these galaxies all have
+    Lastly, 19 should be finally removed manually, as these galaxies all have
     only a single bin/annulus. These galaxies are:
-    A1063 ID 2601
-    A1063 ID 2959
-    A1063 ID 3221
-    A1063 ID 3312
-    A1063 ID 3486
-    A1063 ID 4377
-    A1063 ID 4475
-    A1063 ID 5083
-    A2744 ID 3892
-    A2744 ID 4655
-    A370par 2188
-    A370par 3364
-    A370par 5162
-    A1063par 1611
-    A1063par 2199
-    A1063par 5228
-    A2744par 1716
-    A2744par 2351
-    A2744par 4252
-    M416par 3395
-    M416par 3736
-    M416par 4628
-    M416par 4791
-    M717par 2233
-    M717par 2508
-    M717par 2816
-    M717par 2916
-    M717par 3280
-    M717par 3831
-    M717par 5126
-    M1149par 2529
-    M1149par 3001
+    a1063 ID 2601
+    a1063 ID 2959
+    a1063 ID 2986
+    a1063 ID 3221
+    a1063 ID 3312
+    a1063 ID 3486
+    a1063 ID 4213
+    a1063 ID 4377
+    a1063 ID 4475
+    a1063 ID 5083
+    a1063 ID 6093
+    a2744 ID 2226
+    a2744 ID 3812
+    a2744 ID 3892
+    a2744 ID 4655
+    a2744 ID 4768
+    a2744 ID 7384
+    m1149 ID 4247
+    m416par ID 4628
     
-    This results in 393 galaxies that should be in the final sample for the
-    non-bCG quiescent cluster galaxies, and 296 galaxies for the star formers
-    and non-bCG quiescent galaxies in the field, for a total of 689.
+    This results in: 1) 617 quiescent galaxies
+                     2) 160 star forming galaxies
+                     3) 672 cluster galaxies
+                     4) 105 field galaxies
+    for a total of 777 galaxies in the final sample.
     '''
     
     return
@@ -320,6 +310,9 @@ def postmain(total_FUVVJ=False, total_UVJ=False, parallel_objects=False,
     None.
     
     '''
+    
+    if concat :
+        checks.concatenate()
     
     if total_FUVVJ :
         checks.plot_all_FUVVJ()
