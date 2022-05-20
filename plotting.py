@@ -359,10 +359,11 @@ def histogram_multi(data, label, bins=[], log=False, histtype='step',
 def histogram_2d(xhist, yhist, xscatter, yscatter, xs, ys, fitx, fity, labels,
                  styles, bad='white', bins=[20,20], cmap=cm.Blues,
                  norm=LogNorm(), outfile=None, xlabel=None, ylabel=None,
-                 xmin=None, xmax=None, ymin=None, ymax=None, save=False) :
+                 xmin=None, xmax=None, ymin=None, ymax=None, save=False,
+                 figsizewidth=9.5, figsizeheight=7) :
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(9.5, 7))
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
@@ -502,7 +503,8 @@ def plot_chains(result, results_type='dynesty') :
 def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
                           alphas, contour_xs, contour_ys, contour_zs, version,
                           xlabel=None, ylabel=None, plot_divider=True,
-                          xmin=None, xmax=None, ymin=None, ymax=None, loc=0) :
+                          xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
+                          figsizewidth=9.5, figsizeheight=7) :
     '''
     Plot a standard color-color diagram. This includes the UVJ diagram, as well
     as the FUVVJ diagram.
@@ -537,7 +539,7 @@ def plot_colorcolor_multi(xs, ys, labels, lengths, colors, markers, sizes,
     '''
     
     global currentFig
-    fig = plt.figure(currentFig, figsize=(9.5, 7))
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
     currentFig += 1
     plt.clf()
     ax = fig.add_subplot(111)
@@ -1257,7 +1259,7 @@ def plot_simple_dumb(xs, ys, label='',
     
     return
 
-def plot_simple_multi(xs, ys, labels, colors, markers, styles,
+def plot_simple_multi(xs, ys, labels, colors, markers, styles, alphas=None,
                       xlabel=None, ylabel=None, title=None,
                       xmin=None, xmax=None, ymin=None, ymax=None,
                       figsizewidth=9.5, figsizeheight=7, scale='log', loc=0) :
@@ -1270,7 +1272,7 @@ def plot_simple_multi(xs, ys, labels, colors, markers, styles,
     
     for i in range(len(xs)) :
         ax.plot(xs[i], ys[i], marker=markers[i], linestyle=styles[i],
-                color=colors[i], label=labels[i])
+                color=colors[i], label=labels[i], alpha=alphas[i])
     
     ax.set_yscale(scale)
     ax.set_xscale(scale)
@@ -1281,7 +1283,7 @@ def plot_simple_multi(xs, ys, labels, colors, markers, styles,
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
     # if labels[0] != '' :
-    # ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
+    ax.legend(facecolor='whitesmoke', framealpha=1, fontsize=15, loc=loc)
     
     plt.tight_layout()
     plt.show()

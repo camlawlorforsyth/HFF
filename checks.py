@@ -313,8 +313,6 @@ def concatenate() :
     
     return
 
-concatenate()
-
 def concatenate_all(both=False, save=False) :
     
     clusters = ['a370', 'a1063', 'a2744', 'm416', 'm717', 'm1149']
@@ -354,13 +352,13 @@ def load_FUVVJ_contours(infile='output/FUVVJ_contours.npz') :
 
 def plot_all_FUVVJ(plot=True, save_contours=False) :
     
-    all_clusters, all_parallels = concatenate_all(both=True)
+    catalog = Table.read('output/tables/sample_final.fits')
     
-    cluster_q = all_clusters[all_clusters['pop'] == 'Q']
-    cluster_sf = all_clusters[all_clusters['pop'] == 'SF']
+    cluster_q = catalog[(catalog['env'] == 'cluster') & (catalog['pop'] == 'Q')]
+    cluster_sf = catalog[(catalog['env'] == 'cluster') & (catalog['pop'] == 'SF')]
     
-    field_q = all_parallels[all_parallels['pop'] == 'Q']
-    field_sf = all_parallels[all_parallels['pop'] == 'SF']
+    field_q = catalog[(catalog['env'] == 'field') & (catalog['pop'] == 'Q')]
+    field_sf = catalog[(catalog['env'] == 'field') & (catalog['pop'] == 'SF')]
     
     cluster_q_len, cluster_sf_len = len(cluster_q), len(cluster_sf)
     field_q_len, field_sf_len = len(field_q), len(field_sf)
@@ -411,7 +409,8 @@ def plot_all_FUVVJ(plot=True, save_contours=False) :
                                   [q_xi, sf_xi], [q_yi, sf_yi], [q_z, sf_z],
                                   version='FUVVJ',
                                   xlabel=r'V$-$J', ylabel=r'FUV$-$V',
-                                  xmin=0, xmax=2.1, ymin=0, ymax=8.4, loc=2)
+                                  xmin=0, xmax=2.1, ymin=0, ymax=8.4, loc=2,
+                                  figsizewidth=16, figsizeheight=9)
     
     if save_contours :
         np.savez('FUVVJ_contours.npz', q_xi=q_xi, q_yi=q_yi, q_z=q_z,

@@ -44,5 +44,3 @@ def SFMS() :
                            figsizewidth=14, figsizeheight=10)
     
     return
-
-SFMS()

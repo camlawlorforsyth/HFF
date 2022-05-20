@@ -131,12 +131,13 @@ def determine_expected_integrated_logZ() :
     plt.histogram_2d(mass, metal, HFF['logM'], HFF['avglogZ'],
                      [centers, centers, centers, centers, centers],
                      [tinies, los, medians, his, larges],
-                     [fitx], [fity], ['', 'fit', '', 'HFF'],
+                     [fitx], [fity], ['fit', 'fit', '', 'HFF'],
                      [':', '--', '-', '--', ':'],
                      xlabel=r'$\log(M/M_{\odot})$',
                      ylabel=r'$\log(Z/Z_{\odot})$',
-                     xmin=8, xmax=12, ymin=-1.6, ymax=0.4)
-    
+                     xmin=8, xmax=12, ymin=-1.4, ymax=0.4,
+                     figsizewidth=16, figsizeheight=9)
+    '''
     # now fit the +/- 1 sigma lines using galaxies with logM > 8.7
     popt_lo, pcov_16 = curve_fit(core.tanh, centers[centers > 8.7],
                                  los[centers > 8.7],
@@ -181,7 +182,7 @@ def determine_expected_integrated_logZ() :
     shipley['GallazzilogZ'] = expected
     shipley['sigma'] = np.maximum(expected_hi-expected, expected-expected_lo)
     # shipley.write('output/tables/nbCGs_GallazzilogZ_from-Shipley-mass.fits')
-    
+    '''
     return
 
 def estimate_gradient_from_literature() :
