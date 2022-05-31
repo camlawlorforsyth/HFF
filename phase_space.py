@@ -220,5 +220,3 @@ def phase_space_prep() :
     catalog.write('output/tables/sample_phase-space_with-color-gradients.fits')
     
     return
-
-# phase_space_plot()
