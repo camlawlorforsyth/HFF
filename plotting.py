@@ -380,7 +380,7 @@ def histogram_2d(xhist, yhist, xscatter, yscatter, xs, ys, fitx, fity, labels,
     for i in range(len(fity)) :
         ax.plot(fitx[i], fity[i], 'r-', label=labels[i])
     
-    # ax.plot(xscatter, yscatter, 'ro', label=labels[-1])
+    ax.plot(xscatter, yscatter, 'ro', label=labels[-1])
     
     ax.set_xlabel(xlabel, fontsize=15)
     ax.set_ylabel(ylabel, fontsize=15)
@@ -1103,12 +1103,12 @@ def plot_scatter(xs, ys, color, label, marker, cbar_label='',
     ax = fig.add_subplot(111)
     
     cmap = copy.copy(cmap)
-    norm = Normalize(vmin=vmin, vmax=vmax)
+    # norm = Normalize(vmin=vmin, vmax=vmax)
     
     frame = ax.scatter(xs, ys, c=color, marker=marker, label=label, cmap=cmap,
                        edgecolors='grey')
-    cbar = plt.colorbar(frame)
-    cbar.set_label(cbar_label, fontsize=15)
+    # cbar = plt.colorbar(frame)
+    # cbar.set_label(cbar_label, fontsize=15)
     
     ax.set_yscale(scale)
     ax.set_xscale(scale)
@@ -1143,6 +1143,34 @@ def plot_scatter_err(xs, ys, yerr, color, marker, cbar_label='',
     frame = ax.scatter(xs, ys, c=color, marker=marker, cmap=cmap, zorder=3)
     cbar = plt.colorbar(frame)
     cbar.set_label(cbar_label, fontsize=15)
+    
+    ax.set_yscale(scale)
+    ax.set_xscale(scale)
+    
+    ax.set_xlabel(xlabel, fontsize=15)
+    ax.set_ylabel(ylabel, fontsize=15)
+    
+    ax.set_xlim(xmin, xmax)
+    ax.set_ylim(ymin, ymax)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    return
+
+def plot_scatter_err_asymm(xs, ys, yerr_lo, yerr_hi, color, marker,
+                           xlabel=None, ylabel=None, title=None,
+                           xmin=None, xmax=None, ymin=None, ymax=None, loc=0,
+                           figsizewidth=9.5, figsizeheight=7, scale='linear') :
+    
+    global currentFig
+    fig = plt.figure(currentFig, figsize=(figsizewidth, figsizeheight))
+    currentFig += 1
+    plt.clf()
+    ax = fig.add_subplot(111)
+    
+    ax.errorbar(xs, ys, yerr=(yerr_lo, yerr_hi), color=color, ecolor='grey',
+                linestyle='', marker=marker, markersize=5)
     
     ax.set_yscale(scale)
     ax.set_xscale(scale)

@@ -37,6 +37,29 @@ def prep_for_running_on_astro_and_quixote() :
     
     return
 
+def integrated_prep(population) : # population == 'Q' | 'SF'
+    
+    outfile = 'output/sh_runs/integrated_complete_sample_{}.sh'.format(population)
+    
+    table = Table.read('output/tables/sample_final.fits')
+    table = table[table['pop'] == population]
+    
+    with open(outfile, 'a') as slurm :
+        slurm.write('#!/usr/bin/env bash\n')
+        slurm.write('\n')
+    
+    for cluster, ID in zip(table['cluster'], table['id']) :
+        file = '{}/photometry/{}_ID_{}_photometry.fits'.format(cluster, cluster, ID)
+        outLog = '{}/logs/{}_ID_{}.log'.format(cluster, cluster, ID)
+        
+        cmd = ('nohup python params_integrated_{}.py'.format(population) +
+               ' --infile {} >> {} 2>&1\n'.format(file, outLog))
+        
+        with open(outfile, 'a') as slurm :
+            slurm.write(cmd)
+    
+    return
+
 """
 for cluster in clusters :
     os.makedirs('{}/h5'.format(cluster), # ensure the output directory for the

@@ -78,7 +78,7 @@ def determine_expected_integrated_logZ() :
     sdss = sdss[sdss['SFR_P50'] > -99]
     
     # mask the table based on sSFR (ie. to select quiescent galaxies)
-    sdss = sdss[sdss['SFR_P50'] - sdss['MASS_P50'] < -11]
+    # sdss = sdss[sdss['SFR_P50'] - sdss['MASS_P50'] < -11]
     
     # now select only galaxies with sufficient signal to noise in their pixels
     # table = table[table['SN_MEDIAN'] > 3]
@@ -121,7 +121,7 @@ def determine_expected_integrated_logZ() :
     
     fitx = np.linspace(8, 12, 4001)
     fity = core.tanh(fitx, *popt)
-    
+    '''
     HFF = Table.read(
         'output/tables/nbCGs_integrated-logM-logZ-from-fitting.fits')
     
@@ -167,22 +167,24 @@ def determine_expected_integrated_logZ() :
                            '', '', '', '', ''],
                           [':', '--', '-', '--', ':',
                            '-', '-', '-', '--', '--'],
+                          alphas=[1, 1, 1, 1, 1,
+                                  1, 1, 1, 1, 1],
                           xlabel=r'$\log(M/M_{\odot})$',
                           ylabel=r'$\log(Z/Z_{\odot})$',
                           xmin=8, xmax=12, ymin=-1.6, ymax=0.4, scale='linear',
-                          loc=4)
+                          loc=4, figsizewidth=16, figsizeheight=9)
     
     # now use the fitted relations above to derive expected values for the HFF
-    shipley = Table.read('output/tables/nbCGs_with-Shipley-mass.fits')
+    shipley = Table.read('output/tables/sample_final.fits')
     
-    expected = core.tanh(shipley['logM'], *popt)
-    expected_lo = core.tanh(shipley['logM'], *popt_lo)
-    expected_hi = core.tanh(shipley['logM'], *popt_hi)
+    expected = core.tanh(shipley['lmass'], *popt)
+    expected_lo = core.tanh(shipley['lmass'], *popt_lo)
+    expected_hi = core.tanh(shipley['lmass'], *popt_hi)
     
     shipley['GallazzilogZ'] = expected
     shipley['sigma'] = np.maximum(expected_hi-expected, expected-expected_lo)
-    # shipley.write('output/tables/nbCGs_GallazzilogZ_from-Shipley-mass.fits')
-    '''
+    # shipley.write('output/tables/sample_GallazzilogZ_from-Shipley-mass.fits')
+    
     return
 
 def estimate_gradient_from_literature() :
@@ -338,3 +340,4 @@ def save_mass_metallicity_images() :
                 cluster, cluster, ID))
     
     return
+determine_expected_integrated_logZ()

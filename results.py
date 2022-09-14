@@ -1,10 +1,14 @@
 
 import os
+from os.path import exists
+import glob
 import numpy as np
 
+from astropy.table import Table, vstack
 import prospect.io.read_results as reader
 from prospect.plotting.sfh import parametric_mwa as mwa_calc
 from prospect.plotting.utils import sample_posterior
+from scipy.special import gamma, gammainc
 
 import plotting as plt
 
@@ -40,6 +44,16 @@ def get_results(cluster, ID, binNum, results_type='dynesty', version='') :
     
     # t_hr = result['sampling_duration']/3600
     # print('The sampling took {:.2f} hours'.format(t_hr))
+    
+    return result, obs, model, sps
+
+def get_results_integrated(cluster, ID) :
+    
+    infile = '{}/h5/{}_ID_{}_integrated.h5'.format(cluster, cluster, ID)
+    
+    result, obs, _ = reader.results_from(infile, dangerous=True)
+    model = reader.get_model(result)
+    sps = reader.get_sps(result)
     
     return result, obs, model, sps
 
@@ -91,6 +105,42 @@ def results_corner(cluster, ID, binNum, full=False, results_type='dynesty',
                       (d_lo, d_hi), (MWA_lo, MWA_hi)]
         plt.plot_corner(sub_samples, sub_labels, len(sub_labels), result,
                         ranges=sub_ranges, outfile=outfile, save=save)
+    
+    return
+
+def results_corner_integrated(cluster, ID) :
+    
+    result, obs, model, sps = get_results_integrated(cluster, ID)
+    
+    samples = sample_posterior(result['chain'], weights=result['weights'])
+    
+    mwas = mwa_calc(samples[:, 5], samples[:, 4], power=1)
+    
+    # logify the mass and tau parameters
+    samples[:, 1] = np.log10(samples[:, 1])
+    samples[:, 5] = np.log10(samples[:, 5])
+    
+    
+    samples = np.c_[samples, mwas]
+    
+    z_lo, z_hi = np.percentile(samples[:, 0], [0.15, 99.85])
+    M_lo, M_hi = np.percentile(samples[:, 1], [0.15, 99.85])
+    Z_lo, Z_hi = np.percentile(samples[:, 2], [0.15, 99.85])
+    d_lo, d_hi = np.percentile(samples[:, 3], [0.15, 99.85])
+    t_lo, t_hi = np.percentile(samples[:, 4], [0.15, 99.85])
+    T_lo, T_hi = np.percentile(samples[:, 5], [0.15, 99.85])
+    d_ratio_lo, d_ratio_hi = np.percentile(samples[:, 6], [0.15, 99.85])
+    d_index_lo, d_index_hi = np.percentile(samples[:, 7], [0.15, 99.85])
+    MWA_lo, MWA_hi = np.percentile(samples[:, 8], [0.15, 99.85])
+    
+    sub_samples = np.delete(samples, [4, 5], 1)
+    sub_labels = [r'$z_{\rm red}$', r'$\log(M_{*})$', r'$\log(Z_{*})$',
+                  r'$\hat{\tau}_{\lambda, 2}$', 'ratio', 'index', 'MWA']
+    sub_ranges = [(z_lo, z_hi), (M_lo, M_hi), (Z_lo, Z_hi),
+                  (d_lo, d_hi), (d_ratio_lo, d_ratio_hi),
+                  (d_index_lo, d_index_hi), (MWA_lo, MWA_hi)]
+    plt.plot_corner(sub_samples, sub_labels, len(sub_labels), result,
+                    ranges=sub_ranges, save=False)
     
     return
 
@@ -451,3 +501,233 @@ def test(cluster, ID, version='') :
 # test('a2744', 3964, version='_nonpara')
 # results_corner('a2744', 3964, 1, version='_flat')
 # results_corner('a2744', 3964, 1, version='_gradient')
+
+# results_corner_integrated('a370', 1328)
+# results_corner_integrated('a370', 2590)
+# results_corner_integrated('a370', 3089)
+# results_corner_integrated('a370', 3767)
+# results_corner_integrated('a370', 4259)
+# results_corner_integrated('a370', 5177)
+
+def results_integrated(result) :
+    
+    # get the total number of pixels involved in the fit, as the fits
+    # were completed on a "per pixel" basis
+    nPixels = result['obs']['nPixels'][-1] # use the value for the F160W filter
+    
+    # get the samples
+    samples = sample_posterior(result['chain'], weights=result['weights'])
+    
+    # calculate the MWAs, and add those to the samples
+    mwas = mwa_calc(samples[:, 5], samples[:, 4], power=1)
+    samples = np.c_[samples, mwas]
+    
+    # logify the mass and tau parameters
+    samples[:, 1] = np.log10(samples[:, 1]) + np.log10(nPixels)
+    samples[:, 5] = np.log10(samples[:, 5])
+    
+    z_16, z_50, z_84 = np.percentile(samples[:, 0], [16, 50, 84])
+    logM_16, logM_50, logM_84 = np.percentile(samples[:, 1], [16, 50, 84])
+    logZ_16, logZ_50, logZ_84 = np.percentile(samples[:, 2], [16, 50, 84])
+    Av_16, Av_50, Av_84 = np.percentile(samples[:, 3], [16, 50, 84])
+    tage_16, tage_50, tage_84 = np.percentile(samples[:, 4], [16, 50, 84])
+    logT_16, logT_50, logT_84 = np.percentile(samples[:, 5], [16, 50, 84])
+    ratio_16, ratio_50, ratio_84 = np.percentile(samples[:, 6], [16, 50, 84])
+    index_16, index_50, index_84 = np.percentile(samples[:, 7], [16, 50, 84])
+    MWA_16, MWA_50, MWA_84 = np.percentile(samples[:, 8], [16, 50, 84])
+    
+    return (z_16, z_50, z_84, logM_16, logM_50, logM_84,
+            logZ_16, logZ_50, logZ_84, Av_16, Av_50, Av_84,
+            tage_16, tage_50, tage_84, logT_16, logT_50, logT_84,
+            ratio_16, ratio_50, ratio_84, index_16, index_50, index_84,
+            MWA_16, MWA_50, MWA_84)
+
+def build_summary_results() :
+    
+    outfile = 'output/tables/integrated_results_summary.fits'
+    
+    table = Table.read('output/tables/sample_final.fits')
+    
+    # the values that will be in the final table
+    clus, ids = [], []
+    logM_16s, logM_50s, logM_84s = [], [], []
+    z_16s, z_50s, z_84s = [], [], []
+    logM_16s, logM_50s, logM_84s = [], [], []
+    logZ_16s, logZ_50s, logZ_84s = [], [], []
+    Av_16s, Av_50s, Av_84s = [], [], []
+    tage_16s, tage_50s, tage_84s = [], [], []
+    logT_16s, logT_50s, logT_84s = [], [], []
+    ratio_16s, ratio_50s, ratio_84s = [], [], []
+    index_16s, index_50s, index_84s = [], [], []
+    MWA_16s, MWA_50s, MWA_84s = [], [], []
+    
+    for cluster, ID in zip(table['cluster'], table['id']) :
+        # get the results
+        result, obs, model, sps = get_results_integrated(cluster, ID)
+        
+        (z_16, z_50, z_84, logM_16, logM_50, logM_84,
+         logZ_16, logZ_50, logZ_84, Av_16, Av_50, Av_84,
+         tage_16, tage_50, tage_84, logT_16, logT_50, logT_84,
+         ratio_16, ratio_50, ratio_84, index_16, index_50, index_84,
+         MWA_16, MWA_50, MWA_84) = results_integrated(result)
+        
+        # append the calculated values
+        clus.append(cluster)
+        ids.append(ID)
+        
+        z_16s.append(z_16)
+        z_50s.append(z_50)
+        z_84s.append(z_84)
+        
+        logM_16s.append(logM_16)
+        logM_50s.append(logM_50)
+        logM_84s.append(logM_84)
+        
+        logZ_16s.append(logZ_16)
+        logZ_50s.append(logZ_50)
+        logZ_84s.append(logZ_84)
+        
+        Av_16s.append(Av_16)
+        Av_50s.append(Av_50)
+        Av_84s.append(Av_84)
+        
+        tage_16s.append(tage_16)
+        tage_50s.append(tage_50)
+        tage_84s.append(tage_84)
+        
+        logT_16s.append(logT_16)
+        logT_50s.append(logT_50)
+        logT_84s.append(logT_84)
+        
+        ratio_16s.append(ratio_16)
+        ratio_50s.append(ratio_50)
+        ratio_84s.append(ratio_84)
+        
+        index_16s.append(index_16)
+        index_50s.append(index_50)
+        index_84s.append(index_84)
+        
+        MWA_16s.append(MWA_16)
+        MWA_50s.append(MWA_50)
+        MWA_84s.append(MWA_84)
+    
+    table = Table([clus, ids,
+                   z_16s, z_50s, z_84s,
+                   logM_16s, logM_50s, logM_84s,
+                   logZ_16s, logZ_50s, logZ_84s,
+                   Av_16s, Av_50s, Av_84s,
+                   tage_16s, tage_50s, tage_84s,
+                   logT_16s, logT_50s, logT_84s,
+                   ratio_16s, ratio_50s, ratio_84s,
+                   index_16s, index_50s, index_84s,
+                   MWA_16s, MWA_50s, MWA_84s],
+                  names=('cluster', 'ID',
+                         'z_16', 'z_50', 'z_84',
+                         'logM_16', 'logM_50', 'logM_84',
+                         'logZ_16', 'logZ_50', 'logZ_84',
+                         'Av_16', 'Av_50', 'Av_84',
+                         'tage_16', 'tage_50', 'tage_84',
+                         'logT_16', 'logT_50', 'logT_84',
+                         'ratio_16', 'ratio_50', 'ratio_84',
+                         'index_16', 'index_50', 'index_84',
+                         'MWA_16', 'MWA_50', 'MWA_84'))
+    table.write(outfile)
+    
+    return
+
+def append_summary_results(outfile) :
+    
+    table = Table.read(outfile)
+    
+    table_vals = [clus + '_' + ID for clus, ID in zip(table['cluster'], table['ID'])]
+    fitted_vals = [clus + '_' + ID for clus, ID in zip(fitted_clusters, fitted_IDs)]
+    
+    new_table = Table(table.columns)
+    
+    for fitted_val in fitted_vals :
+        if fitted_val not in table_vals :
+            new_clus, new_ID = fitted_val.split('_')
+            
+            # get the results
+            result, _, _, _ = get_results_integrated(new_clus, new_ID)
+            
+            # add those results as a new row
+            new_row = [new_clus, new_ID] + list(results_integrated(result))
+            new_table.add_row(new_row)
+    
+    if len(new_table) > 0 :
+        table = vstack([table, new_table])
+        table.write(outfile, overwrite=True)
+    
+    return
+
+def plot_summary_results() :
+    
+    table = Table.read('output/tables/integrated_results_summary.fits')
+    
+    logM = table['logM_50']
+    ind_16, ind_50, ind_84 = table['index_16'], table['index_50'], table['index_84']
+    
+    # slope, intercept = np.polyfit(logM, ind_50, 1)
+    # print(slope, intercept)
+    
+    plt.plot_scatter_err_asymm(logM, ind_50,
+                                # np.zeros_like(logM),
+                                # np.zeros_like(logM),
+                               ind_50 - ind_16,
+                               ind_84 - ind_50,
+                               'k', 'o',
+                               xlabel=r'$\log(M_{*}/M_{\odot})$',
+                               ylabel='Calzetti offset index',
+                               xmin=8, xmax=13, ymin=-2.1, ymax=0.5,
+                               figsizewidth=12, figsizeheight=9)
+    
+    return
+
+def SFMS() :
+    
+    table = Table.read('output/tables/integrated_results_summary.fits')
+    
+    logmass = table['logM_50']
+    mass = np.power(10, logmass)
+    tage = table['tage_50']
+    tau = np.power(10, table['logT_50'])
+    
+    sfr = calculate_sfr(mass, tage, tau)
+    
+    norm = np.array( tau*gamma(2)*gammainc(2, tage/tau) )
+    
+    # alt = []
+    # for t, T in zip(tage, tau) :
+    #     times = np.linspace(0, t, 1000)
+    #     alt.append(np.trapz(sfr_calc(times, T), times))
+    # alt = np.array(alt)
+    
+    
+    
+    # print(list(np.sort(gammainc(2, tage/tau))))
+    
+    # print(list(np.sort(norm)))
+    
+    # table['sfr'] = sfr
+    # table.write('output/tables/integrated_results_summary_with_SFR.fits')
+    
+    
+    # plt.plot_scatter(logmass, sfr, 'k', '', 'o',
+    #                  xmin=8, xmax=13, ymin=-4, ymax=4)
+    
+    
+    
+    
+    return
+
+def sfr_calc(times, tau) :
+    return (times/tau)*np.exp(-times/tau)
+
+def calculate_sfr(mass, tage, tau) :
+    return mass*tage/np.square(tau)*np.exp(-tage/tau)/(gamma(2)*gammainc(2, tage/tau))*1e-9
+
+
+
+SFMS()
+
